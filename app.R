@@ -49,7 +49,8 @@ ui <- fluidPage(
         mainPanel(
            plotOutput("radiobutton"),
            plotOutput("radiobutton2"),
-           plotOutput("radiobutton3")
+           plotOutput("radiobutton3"),
+           tableOutput('table')
         )
     )
 )
@@ -73,7 +74,8 @@ server <- function(input, output) {
         theme_bw() +
         labs(color = input$colsofinterest, 
              title = "Periodic Table of Elements",
-             subtitle = input$colsofinterest)
+             subtitle = input$colsofinterest) +
+        theme(legend.position = "bottom")
       print(p)
     })
     
@@ -81,39 +83,51 @@ server <- function(input, output) {
     output$radiobutton2 <- renderPlot({
       
       df2 <- df %>%
-        select(Group, Period, Symbol,NumberofProtons, NumberofNeutrons, AtomicMass, AtomicRadius, input$colsofinterest) %>%
+        select(AtomicNumber, Group, Period, Symbol,NumberofProtons, NumberofNeutrons, AtomicMass, AtomicRadius, input$colsofinterest) %>%
         rename("Variable" = input$colsofinterest)
 
-      p <- ggplot(df2, aes(x = NumberofProtons, y = NumberofNeutrons, 
+      p <- ggplot(df2, aes(x = AtomicNumber, y = AtomicMass, 
                            label = Symbol, color = Variable)) +
-        geom_line(aes(x = NumberofProtons, y = NumberofProtons), color = "black", linetype = 2) +
+        geom_line(aes(x = AtomicNumber, y = AtomicNumber * 2), color = "black", linetype = 2) +
         geom_point(aes(size = AtomicRadius)) +
         geom_text(check_overlap = TRUE, nudge_y = 5,
                   size = 3) +
         theme_bw() +
         labs(color = input$colsofinterest, 
              title = "Elements Organized by Atomic Number",
-             subtitle = input$colsofinterest)
+             subtitle = input$colsofinterest) +
+        theme(legend.position = "bottom")
       print(p)
     })
     
     output$radiobutton3 <- renderPlot({
       
       df2 <- df %>%
-        select(Group, Period, Symbol,NumberofProtons, NumberofNeutrons, AtomicMass, AtomicRadius, input$colsofinterest) %>%
+        select(Group, Period, Symbol,AtomicNumber, NumberofNeutrons, AtomicMass, AtomicRadius, input$colsofinterest) %>%
         rename("Variable" = input$colsofinterest)
       
-      p <- ggplot(df2, aes(x = NumberofProtons, y = Variable, 
+      p <- ggplot(df2, aes(x = AtomicNumber, y = Variable, 
                            label = Symbol, color = Variable)) +
         geom_point(aes(size = AtomicRadius)) +
         theme_bw() +
         labs(y = input$colsofinterest,
              color = input$colsofinterest, 
              title = "Elements Organized by Atomic Number",
-             subtitle = input$colsofinterest)
+             subtitle = input$colsofinterest) +
+        theme(legend.position = "none")
       print(p)
     })
     
+    output$table <- renderTable({
+      
+      df2 <- df %>%
+        filter(NumberofProtons < 15) %>%
+        mutate(AtomicNumber = as.factor(AtomicNumber),
+               Group = as.factor(Group),
+               Period = as.factor(Period)) %>%
+        select(Symbol, Element, AtomicNumber, AtomicMass, Group, Period, AtomicRadius, input$colsofinterest) 
+      df2
+    })
     
 }
 
