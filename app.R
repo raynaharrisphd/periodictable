@@ -7,11 +7,16 @@
 #    https://shiny.posit.co/
 #
 
+# available at <https://raynaharrisphd-periodictable.share.connect.posit.cloud/>
+
 library(shiny)
 library(tidyverse)
 library(readxl)
 library(viridis)
 
+# create file with dependenies for hosting
+#library(rsconnect)
+#rsconnect::writeManifest()
 
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   mutate(NumberofValence = as.factor(NumberofValence),
