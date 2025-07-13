@@ -32,7 +32,7 @@ colsofinterest
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Physical Properties of Elements"),
+    titlePanel("Physical Properties of Elements on the Periodic Table"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
