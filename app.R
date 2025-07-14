@@ -22,7 +22,6 @@ library(bslib)
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   filter(AtomicRadius > 0)  %>%
   mutate(NumberofValence = as.factor(NumberofValence),
-         NumberOfIsotopes = as.factor(NumberOfIsotopes),
          Type = as.factor(Type),
          Year = as.factor(Year)) %>%
   rename("NumIsotopes" = "NumberOfIsotopes",
