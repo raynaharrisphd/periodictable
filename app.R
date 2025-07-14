@@ -31,16 +31,12 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          "Radius"= "AtomicRadius")
 head(df)
 
-colsofinterest <- c("ValenceNum", "Density", "Electronegativity", "Metal" , "NumIsotopes",
-                      "Phase" ,  "Radioactive", "Type")
-
+colsofinterest <- c("Type", "Density", "Electronegativity", "Metal" , "NumIsotopes",
+                      "Phase" ,  "Radioactive", "ValenceNum" )
 colsofinterest
 
-types <- c("Alkali Metal", "Alkaline Earth Metal", "Halogen",  
-           "Lanthanide", "Metal", "Metalloid", "Noble Gas",
-           "Nonmetal",  "Transition Metal" )
-
-colsofinterest
+types <- levels(df$Type)
+types
 
 
 # Define UI for application that draws a histogram
