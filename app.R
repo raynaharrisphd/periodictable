@@ -12,38 +12,51 @@
 library(shiny)
 library(tidyverse)
 library(readxl)
-library(viridis)
 library(bslib)
+library(ggpubr)
+library(rstatix)
+library(forcats)
 
-# create file with dependenies for hosting
+# create file with dependencies for hosting
 #library(rsconnect)
 #rsconnect::writeManifest()
 
+####### Data wrangle #######
 
-myorder <- c("Alkali Metal", "Alkaline Earth Metal", "Transition Metal" ,
-             "Lanthanide" ,   "Metalloid", "Metal",  "Nonmetal" , 
+# inputs
+myorder <- c("Alkali Metal", "Alkaline Earth Metal", "Lanthanide" , "Transition Metal" ,
+              "Metal",  "Metalloid", "Nonmetal" , 
              "Halogen"  , "Noble Gas" )
 
-colsofinterest <- c("Type", "Density", "Electronegativity", "Metal" , "NumIsotopes",
+colsofinterest <- c("Type", "Density", "Electronegativity",  "NumIsotopes",
                     "Phase" ,  "Radioactive", "Radius", "ValenceNum", "Mass" )
 
-quals <- c("Type","Metal" , "Phase",  "Radioactive", "ValenceNum" )
+quals <- c("Type", "Phase",  "Radioactive", "ValenceNum" )
 quants <- c("Density", "Electronegativity", "Mass", "NumIsotopes","Radius" )
 
+# data
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   filter(AtomicRadius > 0)  %>%
   mutate(NumberofValence = as.factor(NumberofValence),
          Type = as.factor(Type),
-         Year = as.factor(Year)) %>%
+         Year = as.factor(Year),
+         Phase = as.factor(Phase),
+         Radioactive = as.factor(Radioactive), 
+         NumberofValence = as.factor(NumberofValence)
+         ) %>%
   rename("NumIsotopes" = "NumberOfIsotopes",
          "Mass" = "AtomicMass",
          "AtomicNum" = "AtomicNumber",
          "ValenceNum" = "NumberofValence",
-         "Radius"= "AtomicRadius") %>%
+         "Radius"= "AtomicRadius",) %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
-  mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"))
+  mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"),
+         Radioactive = fct_na_value_to_level(Radioactive, "no"))
 
 types <- levels(df$Type)
+
+
+####### Shiny  UI #######
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -97,7 +110,10 @@ ui <- fluidPage(
     )
 )
 
-# Define server logic required to draw a histogram
+
+####### Shiny Server #######
+
+# Define server logic 
 server <- function(input, output) {
 
     output$radiobutton <- renderPlot({
@@ -105,7 +121,8 @@ server <- function(input, output) {
       df2 <- df %>%
         mutate(Type = factor(Type, levels = myorder)) %>%
         rename("Variable" = input$quals,
-               "Measure" = input$quants)
+               "Measure" = input$quants) %>%
+        select(Group, Period, NewLabel, Variable, Measure) 
     
       p <- ggplot(df2, aes(x = Group, y = Period, 
                            label = NewLabel, 
@@ -128,22 +145,25 @@ server <- function(input, output) {
     output$radiobutton2 <- renderPlot({
       
       df2 <- df %>%
-        #filter(Type == input$types) %>%
         mutate(Type = factor(Type, levels = myorder)) %>%
         rename("Variable" = input$quals,
-               "Measure" = input$quants) 
+               "Measure" = input$quants)  %>%
+        select(Variable, Measure) 
         
-      mytitle = paste0("Graph of ", input$quants, " by Element ", input$quals, sep = "" )  
+      mytitle = paste0("Graph of ", input$quants, 
+                       " by Element ", input$quals, sep = "" )  
       
       p <- ggplot(df2, aes(x = Variable, y = Measure, 
                            color = Variable)) +
         geom_boxplot() +
         geom_jitter() +
         theme_classic() +
-        labs(y = input$quants,
+        labs(x = input$quals,
+             y = input$quants,
              title = mytitle) +
-        theme(legend.position = "none", 
-              ) 
+        theme(legend.position = "none")  #+
+        #geom_pwc(group.by="Type", hide.ns=TRUE )
+        
       print(p)
     })
     
