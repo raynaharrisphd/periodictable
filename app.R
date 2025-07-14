@@ -20,18 +20,28 @@ library(bslib)
 #rsconnect::writeManifest()
 
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
+  filter(AtomicRadius > 0)  %>%
   mutate(NumberofValence = as.factor(NumberofValence),
+         Type = as.factor(Type),
          Year = as.factor(Year)) %>%
-  filter(AtomicRadius > 0)
+  rename("NumIsotopes" = "NumberOfIsotopes",
+         "Mass" = "AtomicMass",
+         "AtomicNum" = "AtomicNumber",
+         "ValenceNum" = "NumberofValence",
+         "Radius"= "AtomicRadius")
+head(df)
 
-colsofinterest <- c("Density","Electronegativity", "Metal" ,
-                    "NumberOfIsotopes", "NumberofValence", "Phase" ,  "Radioactive", "Type")
+colsofinterest <- c("Density", "Electronegativity", "Metal" , "NumIsotopes",
+                     "ValenceNum", "Phase" ,  "Radioactive", "Type")
 
 colsofinterest
 
-types <- c("Actinide","Alkali Metal", "Alkaline Earth Metal", "Halogen",   "Lanthanide", "Metal", "Metalloid", "Noble Gas", "Nonmetal", "Transactinide", "Transition Metal")
+types <- c("Alkali Metal", "Alkaline Earth Metal", "Halogen",  
+           "Lanthanide", "Metal", "Metalloid", "Noble Gas",
+           "Nonmetal",  "Transition Metal" )
 
-types
+colsofinterest
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -42,26 +52,23 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            radioButtons("colsofinterest", label = "Element Properties", choices = colsofinterest),
+            radioButtons("colsofinterest", label = "Select the Physical Property to Plot ", choices = colsofinterest),
             br(),
             br(),
             br(),
-            br(),
-            br(),
-            radioButtons("types", label = "Filter the Data by  Element Type", choices = types),
+            radioButtons("types", label = "Explore the Dataset by Element Type", choices = types),
         ),
     
 
-        # Tabs with plots
-        
-        navset_card_underline(
-          title = "Visualizations",
-          # Panel with plot ----
-          nav_panel("Periodic Table Graph", plotOutput("radiobutton")),
-          
-          # Panel with summary ----
-          nav_panel("Atomic Number Graph", plotOutput("radiobutton2"))
+         #Show a plot of the generated distribution
+        mainPanel(
+           plotOutput("radiobutton"),
+           #plotOutput("radiobutton2"),
+           #plotOutput("radiobutton3"),
+           tableOutput('table')
         )
+        
+      
         
     )
 )
@@ -72,12 +79,12 @@ server <- function(input, output) {
     output$radiobutton <- renderPlot({
 
       df2 <- df %>%
-        select(Group, Period, Symbol, NumberofProtons, AtomicRadius, input$colsofinterest) %>%
+        select(Group, Period, Symbol, NumberofProtons, Radius, input$colsofinterest) %>%
         rename("Variable" = input$colsofinterest)
 
       p <- ggplot(df2, aes(x = Group, y = Period, 
                            label = Symbol, color = Variable)) +
-        geom_point(aes(size = AtomicRadius)) +
+        geom_point(aes(size = Radius)) +
         geom_text(check_overlap = TRUE, nudge_y = 0.25,
                   size = 3) +
         scale_y_reverse(breaks= c(1,2,3,4,5,6,7)) +
@@ -96,12 +103,12 @@ server <- function(input, output) {
     output$radiobutton2 <- renderPlot({
       
       df2 <- df %>%
-        select(Group, Period, Symbol,AtomicNumber, NumberofNeutrons, AtomicMass, AtomicRadius, input$colsofinterest) %>%
+        select(Group, Period, Symbol,AtomicNum, NumberofNeutrons, Mass, Radius, input$colsofinterest) %>%
         rename("Variable" = input$colsofinterest)
       
-      p <- ggplot(df2, aes(x = AtomicNumber, y = Variable, 
+      p <- ggplot(df2, aes(x = AtomicNum, y = Variable, 
                            label = Symbol, color = Variable)) +
-        geom_point(aes(size = AtomicRadius)) +
+        geom_point(aes(size = Radius)) +
         theme_bw() +
         labs(y = input$colsofinterest,
              color = input$colsofinterest, 
@@ -114,11 +121,11 @@ server <- function(input, output) {
     output$table <- renderTable({
       
       df2 <- df %>%
-        filter(NumberofProtons < 15) %>%
-        mutate(AtomicNumber = as.factor(AtomicNumber),
+        filter(Type == input$types) %>%
+        mutate(AtomicNum = as.factor(AtomicNum),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
-        select(Symbol, Element, AtomicNumber, AtomicMass, Group, Period, AtomicRadius, input$colsofinterest) 
+        select(Symbol, Element, AtomicNum, Mass, Group, Period, Radius, input$colsofinterest) 
       df2
     })
     
