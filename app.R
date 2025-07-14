@@ -42,7 +42,8 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          Year = as.factor(Year),
          Phase = as.factor(Phase),
          Radioactive = as.factor(Radioactive), 
-         NumberofValence = as.factor(NumberofValence)
+         NumberofValence = as.factor(NumberofValence),
+         Element = as.factor(Element)
          ) %>%
   rename("NumIsotopes" = "NumberOfIsotopes",
          "Mass" = "AtomicMass",
@@ -54,6 +55,7 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          Radioactive = fct_na_value_to_level(Radioactive, "no"))
 
 types <- levels(df$Type)
+elements <- levels(df$Element)
 
 
 ####### Shiny  UI #######
@@ -95,15 +97,15 @@ ui <- fluidPage(
             br(),
             br(),
             h4("Explore the Dataset"),
-            radioButtons("types", label = "Filter the Elements by Type", choices = types),
+            radioButtons("types", label = "Filter the Elements by Type", choices = types)
         ),
 
         mainPanel(
-          br(),
+           br(),
            plotOutput("radiobutton"),
            plotOutput("radiobutton2"),
            br(),
-          br(),
+           br(),
            p("Table of Elments"),
            tableOutput('table')
         )
@@ -174,9 +176,10 @@ server <- function(input, output) {
         mutate(AtomicNum = as.factor(AtomicNum),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
-        select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants) 
+        select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants, Mass, Radius, everything()) 
       df2
     })
+    
     
 }
 
