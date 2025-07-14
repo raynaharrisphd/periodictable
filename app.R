@@ -22,6 +22,7 @@ library(bslib)
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   filter(AtomicRadius > 0)  %>%
   mutate(NumberofValence = as.factor(NumberofValence),
+         NumberofValence = as.factor(NumberOfIsotopes),
          Type = as.factor(Type),
          Year = as.factor(Year)) %>%
   rename("NumIsotopes" = "NumberOfIsotopes",
@@ -31,8 +32,8 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          "Radius"= "AtomicRadius")
 head(df)
 
-colsofinterest <- c("Density", "Electronegativity", "Metal" , "NumIsotopes",
-                     "ValenceNum", "Phase" ,  "Radioactive", "Type")
+colsofinterest <- c("ValenceNum", "Density", "Electronegativity", "Metal" , "NumIsotopes",
+                      "Phase" ,  "Radioactive", "Type")
 
 colsofinterest
 
@@ -47,16 +48,16 @@ colsofinterest
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Physical Properties of Elements on the Periodic Table"),
+    titlePanel("Plot Physical Properties of Elements on the Periodic Table"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            radioButtons("colsofinterest", label = "Select the Physical Property to Plot ", choices = colsofinterest),
+            radioButtons("colsofinterest", label = "Plot Physical Properties", choices = colsofinterest),
             br(),
             br(),
             br(),
-            radioButtons("types", label = "Explore the Dataset by Element Type", choices = types),
+            radioButtons("types", label = "Explore the Dataset by Type", choices = types),
         ),
     
 
@@ -79,13 +80,16 @@ server <- function(input, output) {
     output$radiobutton <- renderPlot({
 
       df2 <- df %>%
-        select(Group, Period, Symbol, NumberofProtons, Radius, input$colsofinterest) %>%
-        rename("Variable" = input$colsofinterest)
+        select(AtomicNum, Mass, Group, Period, Symbol, NumberofProtons, Radius, input$colsofinterest) %>%
+        rename("Variable" = input$colsofinterest) %>%
+        mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"))
+      head(df2$NewLabel)
 
       p <- ggplot(df2, aes(x = Group, y = Period, 
-                           label = Symbol, color = Variable)) +
+                           label = NewLabel, 
+                           color = Variable)) +
         geom_point(aes(size = Radius)) +
-        geom_text(check_overlap = TRUE, nudge_y = 0.25,
+        geom_text(check_overlap = TRUE, nudge_y = 0.5,
                   size = 3) +
         scale_y_reverse(breaks= c(1,2,3,4,5,6,7)) +
         scale_x_continuous(breaks = c(2,4,6,8,10,12,14,16,18)) +
@@ -125,7 +129,7 @@ server <- function(input, output) {
         mutate(AtomicNum = as.factor(AtomicNum),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
-        select(Symbol, Element, AtomicNum, Mass, Group, Period, Radius, input$colsofinterest) 
+        select(AtomicNum, Symbol, Element, Mass, Group, Period, Radius, input$colsofinterest) 
       df2
     })
     
