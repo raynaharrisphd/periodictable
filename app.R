@@ -20,6 +20,10 @@ library(bslib)
 #rsconnect::writeManifest()
 
 
+myorder <- c("Alkali Metal", "Alkaline Earth Metal", "Transition Metal" ,
+             "Lanthanide" ,   "Metalloid", "Metal",  "Nonmetal" , 
+             "Halogen"  , "Noble Gas" )
+
 colsofinterest <- c("Type", "Density", "Electronegativity", "Metal" , "NumIsotopes",
                     "Phase" ,  "Radioactive", "Radius", "ValenceNum", "Mass" )
 
@@ -38,12 +42,8 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          "Radius"= "AtomicRadius") %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
   mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"))
-head(df)
-
 
 types <- levels(df$Type)
-types
-
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -59,18 +59,39 @@ ui <- fluidPage(
             radioButtons("quals", label = "Color: Qualitative Properties", choices = quals),
             radioButtons("quants", label = "Scale: Quantitative Prorties", choices = quants),
             br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
             h4("Explore the Dataset"),
             radioButtons("types", label = "Filter the Elements by Type", choices = types),
         ),
-    
 
-         #Show a plot of the generated distribution
         mainPanel(
           br(),
-          plotOutput("radiobutton"),
-           #plotOutput("radiobutton2"),
-           #plotOutput("radiobutton3"),
+           plotOutput("radiobutton"),
+           plotOutput("radiobutton2"),
            br(),
+          br(),
+           p("Table of Elments"),
            tableOutput('table')
         )
     )
@@ -82,6 +103,7 @@ server <- function(input, output) {
     output$radiobutton <- renderPlot({
       
       df2 <- df %>%
+        mutate(Type = factor(Type, levels = myorder)) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)
     
@@ -101,30 +123,27 @@ server <- function(input, output) {
       print(p)
     })
     
-    
-
+  
     
     output$radiobutton2 <- renderPlot({
       
       df2 <- df %>%
         #filter(Type == input$types) %>%
+        mutate(Type = factor(Type, levels = myorder)) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants) 
         
+      mytitle = paste0("Graph of ", input$quants, " by Element ", input$quals, sep = "" )  
       
-      p <- ggplot(df2, aes(x = AtomicNum, y = Variable, 
-                           label = NewLabel, color = Variable)) +
-        geom_point(aes(size = Measure)) +
-        geom_text(check_overlap = TRUE, nudge_y = 0.2,
-                  size = 3) +
+      p <- ggplot(df2, aes(x = Variable, y = Measure, 
+                           color = Variable)) +
+        geom_boxplot() +
+        geom_jitter() +
         theme_classic() +
-        labs(y = input$colsofinterest,
-             color = input$colsofinterest, 
-             title = "Elements Organized by Atomic Number",
-             subtitle = input$colsofinterest) +
-        theme(legend.position = "bottom", 
-              ) +
-        scale_x_continuous(breaks = c(1,3,11,19,37,55,87), limits = c(0,87)) 
+        labs(y = input$quants,
+             title = mytitle) +
+        theme(legend.position = "none", 
+              ) 
       print(p)
     })
     
