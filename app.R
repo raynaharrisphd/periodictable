@@ -13,6 +13,7 @@ library(shiny)
 library(tidyverse)
 library(readxl)
 library(viridis)
+library(bslib)
 
 # create file with dependenies for hosting
 #library(rsconnect)
@@ -28,10 +29,9 @@ colsofinterest <- c("Density","Electronegativity", "Metal" ,
 
 colsofinterest
 
-labelsofinterest <- c("Electronegativity","Number of Valence Electrons", "Phase" ,  "Radioactivity", "Type")
+types <- c("Actinide","Alkali Metal", "Alkaline Earth Metal", "Halogen",   "Lanthanide", "Metal", "Metalloid", "Noble Gas", "Nonmetal", "Transactinide", "Transition Metal")
 
-colsofinterest
-
+types
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -42,16 +42,27 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            radioButtons("colsofinterest", label = "Element Properties", choices = colsofinterest)
+            radioButtons("colsofinterest", label = "Element Properties", choices = colsofinterest),
+            br(),
+            br(),
+            br(),
+            br(),
+            br(),
+            radioButtons("types", label = "Filter the Data by  Element Type", choices = types),
         ),
+    
 
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("radiobutton"),
-           plotOutput("radiobutton2"),
-           plotOutput("radiobutton3"),
-           tableOutput('table')
+        # Tabs with plots
+        
+        navset_card_underline(
+          title = "Visualizations",
+          # Panel with plot ----
+          nav_panel("Periodic Table Graph", plotOutput("radiobutton")),
+          
+          # Panel with summary ----
+          nav_panel("Atomic Number Graph", plotOutput("radiobutton2"))
         )
+        
     )
 )
 
@@ -80,27 +91,9 @@ server <- function(input, output) {
     })
     
     
-    output$radiobutton2 <- renderPlot({
-      
-      df2 <- df %>%
-        select(AtomicNumber, Group, Period, Symbol,NumberofProtons, NumberofNeutrons, AtomicMass, AtomicRadius, input$colsofinterest) %>%
-        rename("Variable" = input$colsofinterest)
 
-      p <- ggplot(df2, aes(x = AtomicNumber, y = AtomicMass, 
-                           label = Symbol, color = Variable)) +
-        geom_line(aes(x = AtomicNumber, y = AtomicNumber * 2), color = "black", linetype = 2) +
-        geom_point(aes(size = AtomicRadius)) +
-        geom_text(check_overlap = TRUE, nudge_y = 5,
-                  size = 3) +
-        theme_bw() +
-        labs(color = input$colsofinterest, 
-             title = "Elements Organized by Atomic Number",
-             subtitle = input$colsofinterest) +
-        theme(legend.position = "bottom")
-      print(p)
-    })
     
-    output$radiobutton3 <- renderPlot({
+    output$radiobutton2 <- renderPlot({
       
       df2 <- df %>%
         select(Group, Period, Symbol,AtomicNumber, NumberofNeutrons, AtomicMass, AtomicRadius, input$colsofinterest) %>%
@@ -114,7 +107,7 @@ server <- function(input, output) {
              color = input$colsofinterest, 
              title = "Elements Organized by Atomic Number",
              subtitle = input$colsofinterest) +
-        theme(legend.position = "none")
+        theme(legend.position = "bottom")
       print(p)
     })
     
