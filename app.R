@@ -38,17 +38,20 @@ natural <- c( "solid", "liq" , "gas" )
 phaselevels <- c("solid", "liq", "gas", "artificial")
 
 colsofinterest <- c("Type", "Density", "Electronegativity",  "NumberOfIsotopes",
-                    "Phase" ,  "Radioactive", "Radius", "ValenceElectrons", "Mass", "NumberofNeutrons" )
+                    "Phase" ,  "Radioactive", "Radius", "ValenceElectrons", "AtomicMass", "NumberofNeutrons" )
 
 quals <- c(  "Phase", "Radioactive" , "Type",  "ValenceElectrons")
-quants <- c("Density",  "ElectronAffinity", "Electronegativity", "Mass",    "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons","Radius" )
+quants <- c("Density",  "ElectronAffinity", "Electronegativity", "AtomicMass",    "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons","Radius" )
 
 ####### Data wrangle #######
 
 pubchem <- read_csv("PubChemElements_all.csv") %>%
-  select(Name, ElectronConfiguration, ElectronAffinity) %>%
+  select(Name, ElectronConfiguration, ElectronAffinity, AtomicMass) %>%
   rename("Element" = "Name") 
 pubchem
+
+github <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
+  select(-AtomicMass)
 
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   mutate(NumberofValence = as.factor(NumberofValence),
@@ -59,8 +62,7 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          NumberofValence = as.factor(NumberofValence),
          Element = as.factor(Element)
          ) %>%
-  rename("Mass" = "AtomicMass",
-         "AtomicNum" = "AtomicNumber",
+  rename("AtomicNum" = "AtomicNumber",
          "ValenceElectrons" = "NumberofValence",
          "Radius"= "AtomicRadius") %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
@@ -126,10 +128,10 @@ ui <- fluidPage(
             radioButtons("quants", label = "Scale: Quantitative Prorties", 
                          choices = quants, selected = "Electronegativity"),
                         br(),
-            checkboxGroupInput("phases", label = "Filter: Phase", 
+            checkboxGroupInput("phases", label = "Select: Phase", 
                                choices = phases, selected = natural),
             br(),
-            checkboxGroupInput("types", label = "Filter: Element Type", 
+            checkboxGroupInput("types", label = "Select: Element Type", 
                                choices = types, selected = displayfirst)
         ),
 
@@ -152,7 +154,7 @@ ui <- fluidPage(
            tableOutput('table'),
            br(),
            h5("Summary"),
-           p("Physical properties selected include: " ),
+           p("Data included are from the following element types and phases: " ),
            br(),
            textOutput('printme3'),
            br(),
@@ -266,7 +268,8 @@ server <- function(input, output) {
     output$table <- renderTable({
       
       df2 <- df %>%
-        filter(Type %in% input$types) %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
         mutate(AtomicNum = as.factor(AtomicNum),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
@@ -354,10 +357,9 @@ server <- function(input, output) {
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
         select(AtomicNum, Symbol, Element, input$quals, input$quants) %>% 
-        arrange(desc(.[[5]]))  %>%
-        drop_na()
+        arrange(.[[5]])  
       
-      df3 <- tail(df2, 1) %>%
+      df3 <- head(df2, 1) %>%
         pull(Element)
       print(paste0("Which element with the selected properies has the lowest ",  input$quants,  "? ",df3, sep = ""))
     })
