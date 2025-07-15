@@ -26,7 +26,7 @@ library(forcats)
 
 # inputs
 myorder <- c("Alkali Metal", "Alkaline Earth Metal", "Lanthanide" ,
-             "Actinide" , "Transactinide", "Transition Metal" ,
+             "Actinide" ,  "Transition Metal" ,
               "Metal",  "Metalloid", "Nonmetal" , 
              "Halogen"  , "Noble Gas" )
 
@@ -41,6 +41,11 @@ quals <- c("Type",  "Phase", "Radioactive", "ValenceNum" )
 quants <- c( "Mass", "Density", "Radius",  "Electronegativity",  "NumIsotopes" )
 
 ####### Data wrangle #######
+
+test <- read_csv("PubChemElements_all.csv") %>%
+  select(Symbol,ElectronConfiguration)
+test
+
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   mutate(NumberofValence = as.factor(NumberofValence),
          Type = as.factor(Type),
@@ -61,8 +66,10 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   filter(Type %in% myorder) %>%
   mutate(Type = factor(Type, levels = myorder)) 
 
+df[85, 7] = "Halogen"
 df[86, 7] = "Noble Gas"
 df[87, 7] = "Alkali Metal"
+df[88, 7] = "Alkaline Earth Metal"
 
 df
 
@@ -224,7 +231,11 @@ server <- function(input, output) {
                Period = as.factor(Period)) %>%
         select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants) %>% 
         arrange(.[[7]])
-      print(df2)
+      
+      df3 <- inner_join(df2, test) %>%
+        select(AtomicNum, Symbol, Element, Group, Period, ElectronConfiguration, everything()) 
+      
+      print(df3)
     })
     
   
