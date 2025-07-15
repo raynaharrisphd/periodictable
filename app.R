@@ -38,10 +38,10 @@ natural <- c( "solid", "liq" , "gas" )
 phaselevels <- c("solid", "liq", "gas", "artificial")
 
 colsofinterest <- c("Type", "Density", "Electronegativity",  "NumberOfIsotopes",
-                    "Phase" ,  "Radioactive", "Radius", "ValenceElectrons", "AtomicMass", "NumberofNeutrons" )
+                    "Phase" ,  "Radioactive", "AtomicRadius", "ValenceElectrons", "NumberofNeutrons" )
 
 quals <- c(  "Phase", "Radioactive" , "Type",  "ValenceElectrons")
-quants <- c("Density",  "ElectronAffinity", "Electronegativity", "AtomicMass",    "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons","Radius" )
+quants <- c("Density",  "ElectronAffinity", "Electronegativity", "AtomicMass",    "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons","AtomicRadius" )
 
 ####### Data wrangle #######
 
@@ -62,15 +62,13 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          NumberofValence = as.factor(NumberofValence),
          Element = as.factor(Element)
          ) %>%
-  rename("AtomicNum" = "AtomicNumber",
-         "ValenceElectrons" = "NumberofValence",
-         "Radius"= "AtomicRadius") %>%
-  select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
-  mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"),
+  rename("ValenceElectrons" = "NumberofValence") %>%
+  select(AtomicNumber, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
+  mutate(NewLabel = paste(AtomicNumber, Symbol, sep = "\n"),
          Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
   mutate(Type = factor(Type, levels = myorder),
          Phase = factor(Phase, levels = phaselevels)) %>%
-  left_join(., pubchem)
+  left_join(., pubchem, by = "Element")
 
 levels(df$Phase)
 
@@ -105,7 +103,7 @@ phases <- levels(df$Phase)
 
 mybreaks <- df %>%
   filter(Group == 1) %>%
-  pull(AtomicNum)
+  pull(AtomicNumber)
 
 mybreaks[8] <- 119
 
@@ -134,7 +132,10 @@ ui <- fluidPage(
             checkboxGroupInput("types", label = "Select: Element Type", 
                                choices = types, selected = displayfirst),
             br(),
-            downloadButton("downloadTable", "Download Table")
+            downloadButton("downloadTable2", "Download the table displayed"),
+            br(),
+            br(),
+            downloadButton("downloadTable", "Download the full dataset")
         ),
 
         mainPanel(
@@ -203,12 +204,12 @@ server <- function(input, output) {
         filter(Type %in% input$types) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
-        select(AtomicNum, Symbol, Variable, Measure)  %>%
+        select(AtomicNumber, Symbol, Variable, Measure)  %>%
         drop_na()
       
       mytitle = paste0("Barplot of ", input$quants, " by Atomic Number", sep = "" )  
 
-      p <- ggplot(df2, aes(x = AtomicNum , y = Measure, 
+      p <- ggplot(df2, aes(x = AtomicNumber , y = Measure, 
                            fill = Variable, label = Symbol)) +
         geom_bar(stat = "identity") +
         geom_text(check_overlap = TRUE) +
@@ -258,10 +259,10 @@ server <- function(input, output) {
       df2 <- df %>%
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
-        mutate(AtomicNum = as.factor(AtomicNum),
+        mutate(AtomicNum = as.factor(AtomicNumber),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
-        select(AtomicNum, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
+        select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
         arrange(desc(.[[7]])) %>%
         drop_na()
       print(df2)
@@ -278,7 +279,7 @@ server <- function(input, output) {
       df3 <- df %>%
         mutate(Type = factor(Type, levels = myorder)) %>%
         filter(Type %in% input$types) %>%
-        mutate(AtomicNum = as.factor(AtomicNum),
+        mutate(AtomicNumber = as.factor(AtomicNumber),
                Group = as.factor(Group),
                Period = as.factor(Period),
                Type = as.factor(Type)) %>%
@@ -324,7 +325,7 @@ server <- function(input, output) {
       df2 <- df %>%
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
-        select(AtomicNum, Symbol, Element, input$quals, input$quants) %>% 
+        select(AtomicNumber, Symbol, Element, input$quals, input$quants) %>% 
         arrange(desc(.[[5]])) 
       
       df3 <- head(df2, 1) %>%
@@ -338,7 +339,7 @@ server <- function(input, output) {
       df2 <- df %>%
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
-        select(AtomicNum, Symbol, Element, input$quals, input$quants) %>% 
+        select(AtomicNumber, Symbol, Element, input$quals, input$quants) %>% 
         arrange(.[[5]])  
       
       df3 <- head(df2, 1) %>%
@@ -360,7 +361,39 @@ server <- function(input, output) {
         "periodictabledata.csv"
       },
       content = function(file) {
-        write.csv(head(mtcars), file, row.names = FALSE)
+        
+        df2 <- df %>%
+          #filter(Type %in% input$types,
+          #       Phase %in% input$phases) %>%
+          select("AtomicNumber","Element", "Symbol", "AtomicMass" , 
+                 "NumberofProtons", "NumberofNeutrons" ,  "ElectronConfiguration", "Period" , "Group" , "Phase" ,"Radioactive", "Type" , "ValenceElectrons",  everything())
+        head(df2)
+          
+        write.csv(df2, file, row.names = FALSE)
+      }
+    )
+    
+    # Handle the download
+    output$downloadTable2 <- downloadHandler(
+      filename = function() {
+        myfilename <- paste0("periodictabledata-", input$quals, "-", input$quants, ".csv")
+        myfilename
+      },
+      
+      content = function(file) {
+        
+         df2 <- df %>%
+          filter(Type %in% input$types,
+                 Phase %in% input$phases) %>%
+          mutate(AtomicNum = as.factor(AtomicNumber),
+                 Group = as.factor(Group),
+                 Period = as.factor(Period)) %>%
+          select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
+          arrange(desc(.[[7]])) %>%
+          drop_na()
+        print(df2)
+        
+        write.csv(df2, file, row.names = FALSE)
       }
     )
     
