@@ -34,11 +34,11 @@ displayfirst <- c("Alkali Metal", "Alkaline Earth Metal", "Metal",
                  "Metalloid", "Nonmetal", 
                  "Halogen"  , "Noble Gas" )
 
-colsofinterest <- c("Type", "Density", "Electronegativity",  "NumIsotopes",
-                    "Phase" ,  "Radioactive", "Radius", "ValenceNum", "Mass" )
+colsofinterest <- c("Type", "Density", "Electronegativity",  "NumberOfIsotopes",
+                    "Phase" ,  "Radioactive", "Radius", "ValenceNum", "Mass", "NumberofNeutrons" )
 
 quals <- c("Type",  "Phase", "Radioactive", "ValenceNum" )
-quants <- c( "Mass", "Density", "Radius",  "Electronegativity", "ElectronAffinity", "NumIsotopes" )
+quants <- c( "Mass", "Density", "Radius",  "Electronegativity", "ElectronAffinity",  "NumberofProtons", "NumberofNeutrons", "NumberOfIsotopes"  )
 
 ####### Data wrangle #######
 
@@ -56,8 +56,7 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          NumberofValence = as.factor(NumberofValence),
          Element = as.factor(Element)
          ) %>%
-  rename("NumIsotopes" = "NumberOfIsotopes",
-         "Mass" = "AtomicMass",
+  rename("Mass" = "AtomicMass",
          "AtomicNum" = "AtomicNumber",
          "ValenceNum" = "NumberofValence",
          "Radius"= "AtomicRadius") %>%
@@ -246,7 +245,7 @@ server <- function(input, output) {
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
         select(AtomicNum, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
-        arrange(.[[7]])
+        arrange(desc(.[[7]]))
       
       pubchem <- pubchem %>%
         select(-ElectronAffinity)
