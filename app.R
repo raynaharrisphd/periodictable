@@ -43,8 +43,8 @@ quants <- c( "Mass", "Density", "Radius",  "Electronegativity",  "NumIsotopes" )
 ####### Data wrangle #######
 
 pubchem <- read_csv("PubChemElements_all.csv") %>%
-  select(Name, ElectronConfiguration) %>%
-  rename("Element" = "Name")
+  select(Name, ElectronConfiguration, YearDiscovered) %>%
+  rename("Element" = "Name") 
 pubchem
 
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
@@ -60,7 +60,7 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          "Mass" = "AtomicMass",
          "AtomicNum" = "AtomicNumber",
          "ValenceNum" = "NumberofValence",
-         "Radius"= "AtomicRadius",) %>%
+         "Radius"= "AtomicRadius") %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
   mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"),
          Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
@@ -248,7 +248,7 @@ server <- function(input, output) {
         arrange(.[[7]])
       
       df3 <- inner_join(df2, pubchem) %>%
-        select(AtomicNum, Symbol, Element, Group, Period, ElectronConfiguration, everything()) 
+        select(AtomicNum, Symbol, Element, Group, Period, ElectronConfiguration, YearDiscovered, everything()) 
       
       print(df3)
     })
