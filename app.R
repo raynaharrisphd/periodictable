@@ -60,6 +60,11 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   filter(Type %in% myorder) %>%
   mutate(Type = factor(Type, levels = myorder)) 
 
+df[86, 7] = "Noble Gas"
+df[87, 7] = "Alkali Metal"
+
+df
+
 types <- levels(df$Type)
 elements <- levels(df$Element)
 
@@ -100,11 +105,17 @@ ui <- fluidPage(
            br(),
            plotOutput("boxplot"),
            br(),
-           p("Data Averaged across Elements with Similar Properties"),
-           tableOutput('summary'),
+           #p("Data Averaged across Elements with Similar Properties"),
+           #tableOutput('summary'),
            br(),
-           p("Data for Elements in the Graphs Above"),
-           tableOutput('table')
+           #h5("Table 1: Differences"),
+           #p("The table below shows shows the top five bigest differences in quantitative variation between two variables. Stars next to the p.adj  column indicate statistical significance (p.adj < 0.05)."),
+           #tableOutput('stats'),
+           h5("Table 1: Element Data"),
+           p("This table contains all the data for the elements in the graphs above."),
+           tableOutput('table'),
+           br()
+           
         )
     )
 )
@@ -156,7 +167,7 @@ server <- function(input, output) {
         select(AtomicNum, Symbol, Variable, Measure)  %>%
         drop_na()
       
-      mytitle = paste0("Barplot of Increasing ", input$quants, sep = "" )  
+      mytitle = paste0("Barplot of ", input$quants, " by Atomic Number", sep = "" )  
 
       p <- ggplot(df2, aes(x = AtomicNum , y = Measure, 
                            fill = Variable, label = Symbol)) +
@@ -210,7 +221,8 @@ server <- function(input, output) {
         mutate(AtomicNum = as.factor(AtomicNum),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
-        select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants) 
+        select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants) %>% 
+        arrange(.[[7]])
       print(df2)
     })
     
@@ -239,6 +251,30 @@ server <- function(input, output) {
       colnames(df3) <- newcolname
       print(df3)
     })
+    
+    
+    output$stats <- renderTable({
+      
+      df2 <- df %>%
+        filter(Type %in% input$types) %>%
+        rename("Groups" = input$quals,
+               "Measure" = input$quants)  %>%
+        select(Groups, Measure) 
+      
+      tukey_result <- data.frame(TukeyHSD(aov(Measure ~ Groups, data = df2))[[1]]) %>%
+        mutate(comparison = row.names(.),
+               " " = word(comparison, 1, sep = "-"),
+               "  " = word(comparison, 2, sep = "-"),
+              "   " = stars.pval(p.adj)) %>%
+        select(" ", "  ", diff, p.adj, "   ") %>%
+        arrange(p.adj) %>%
+        rename("Difference" = diff,
+               "p-value" = p.adj) 
+      print(head(tukey_result, 5))
+  
+      
+    })
+    
     
     
 }
