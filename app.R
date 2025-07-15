@@ -38,12 +38,12 @@ colsofinterest <- c("Type", "Density", "Electronegativity",  "NumIsotopes",
                     "Phase" ,  "Radioactive", "Radius", "ValenceNum", "Mass" )
 
 quals <- c("Type",  "Phase", "Radioactive", "ValenceNum" )
-quants <- c( "Mass", "Density", "Radius",  "Electronegativity",  "NumIsotopes" )
+quants <- c( "Mass", "Density", "Radius",  "Electronegativity", "ElectronAffinity", "NumIsotopes" )
 
 ####### Data wrangle #######
 
 pubchem <- read_csv("PubChemElements_all.csv") %>%
-  select(Name, ElectronConfiguration, YearDiscovered) %>%
+  select(Name, ElectronConfiguration, ElectronAffinity) %>%
   rename("Element" = "Name") 
 pubchem
 
@@ -64,10 +64,11 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
   mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"),
          Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
-  #filter(Type %in% myorder) %>%
-  mutate(Type = factor(Type, levels = myorder)) 
+  mutate(Type = factor(Type, levels = myorder)) %>%
+  left_join(., pubchem)
 
 
+df[43, 7] = "Transition Metal"
 df[85, 7] = "Halogen"
 df[86, 7] = "Noble Gas"
 df[87, 7] = "Alkali Metal"
@@ -244,11 +245,13 @@ server <- function(input, output) {
         mutate(AtomicNum = as.factor(AtomicNum),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
-        select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants) %>% 
+        select(AtomicNum, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
         arrange(.[[7]])
       
+      pubchem <- pubchem %>%
+        select(-ElectronAffinity)
       df3 <- inner_join(df2, pubchem) %>%
-        select(AtomicNum, Symbol, Element, Group, Period, ElectronConfiguration, YearDiscovered, everything()) 
+        select(AtomicNum, Symbol, Element, Period, Group, ElectronConfiguration,  everything()) 
       
       print(df3)
     })
