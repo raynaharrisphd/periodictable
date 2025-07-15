@@ -34,11 +34,14 @@ displayfirst <- c("Alkali Metal", "Alkaline Earth Metal", "Metal",
                  "Metalloid", "Nonmetal", 
                  "Halogen"  , "Noble Gas" )
 
-colsofinterest <- c("Type", "Density", "Electronegativity",  "NumberOfIsotopes",
-                    "Phase" ,  "Radioactive", "Radius", "ValenceNum", "Mass", "NumberofNeutrons" )
+natural <- c( "solid", "liq" , "gas" )
+phaselevels <- c("solid", "liq", "gas", "artificial")
 
-quals <- c("Type",  "Phase", "Radioactive", "ValenceNum" )
-quants <- c( "Mass", "Density", "Radius",  "Electronegativity", "ElectronAffinity",  "NumberofProtons", "NumberofNeutrons", "NumberOfIsotopes"  )
+colsofinterest <- c("Type", "Density", "Electronegativity",  "NumberOfIsotopes",
+                    "Phase" ,  "Radioactive", "Radius", "ValenceElectrons", "Mass", "NumberofNeutrons" )
+
+quals <- c(  "Phase", "Radioactive" , "Type",  "ValenceElectrons")
+quants <- c("Density",  "ElectronAffinity", "Electronegativity", "Mass",    "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons","Radius" )
 
 ####### Data wrangle #######
 
@@ -58,14 +61,16 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          ) %>%
   rename("Mass" = "AtomicMass",
          "AtomicNum" = "AtomicNumber",
-         "ValenceNum" = "NumberofValence",
+         "ValenceElectrons" = "NumberofValence",
          "Radius"= "AtomicRadius") %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
   mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"),
          Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
-  mutate(Type = factor(Type, levels = myorder)) %>%
+  mutate(Type = factor(Type, levels = myorder),
+         Phase = factor(Phase, levels = phaselevels)) %>%
   left_join(., pubchem)
 
+levels(df$Phase)
 
 df[43, 7] = "Transition Metal"
 df[85, 7] = "Halogen"
@@ -87,9 +92,14 @@ df[115, 7] = "Metal"
 df[116, 7] = "Metal"
 df[117, 7] = "Halogen"
 
+df[43, 11] = "solid"
+
+#Transition metal
+
 
 types <- levels(df$Type)
 elements <- levels(df$Element)
+phases <- levels(df$Phase)
 
 mybreaks <- df %>%
   filter(Group == 1) %>%
@@ -111,10 +121,13 @@ ui <- fluidPage(
             #radioButtons("colsofinterest", label = "Visualize Qualitative Properties", choices = colsofinterest),
             h4("Customize the Periodic Table"),
             radioButtons("quals", label = "Color: Qualitative Properties", 
-                         choices = quals),
+                         choices = quals, selected = "Type"),
             br(),
             radioButtons("quants", label = "Scale: Quantitative Prorties", 
-                         choices = quants),
+                         choices = quants, selected = "Electronegativity"),
+                        br(),
+            checkboxGroupInput("phases", label = "Filter: Phase", 
+                               choices = phases, selected = natural),
             br(),
             checkboxGroupInput("types", label = "Filter: Element Type", 
                                choices = types, selected = displayfirst)
@@ -132,12 +145,24 @@ ui <- fluidPage(
            #tableOutput('summary'),
            br(),
            #h5("Table 1: Differences"),
-           #p("The table below shows shows the top five bigest differences in quantitative variation between two variables. Stars next to the p.adj  column indicate statistical significance (p.adj < 0.05)."),
+           #p("The table below shows shows the top five biggest differences in quantitative variation between two variables. Stars next to the p.adj  column indicate statistical significance (p.adj < 0.05)."),
            #tableOutput('stats'),
            h5("Table 1: Element Data"),
            p("This table contains all the data for the elements in the graphs above, arranges from smallest to largest for the selected quantitative variable."),
            tableOutput('table'),
-           br()
+           br(),
+           h5("Summary"),
+           p("Physical properties selected include: " ),
+           br(),
+           textOutput('printme3'),
+           br(),
+           textOutput('printme4'), 
+           br(),
+           h5("Question and Answer"),
+           br(),
+           textOutput('printme'),
+           br(),
+           textOutput('printme2')
            
         )
     )
@@ -156,7 +181,8 @@ server <- function(input, output) {
       
       df2 <- df %>%
         mutate(Type = factor(Type, levels = myorder)) %>%
-        filter(Type %in% input$types) %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants) %>%
         select(Group, Period, NewLabel, Variable, Measure) %>%
@@ -245,17 +271,18 @@ server <- function(input, output) {
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
         select(AtomicNum, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
-        arrange(desc(.[[7]]))
+        arrange(desc(.[[7]])) %>%
+        drop_na()
       
       pubchem <- pubchem %>%
         select(-ElectronAffinity)
       df3 <- inner_join(df2, pubchem) %>%
-        select(AtomicNum, Symbol, Element, Period, Group, ElectronConfiguration,  everything()) 
+        select(AtomicNum, Symbol, Element, Period, Group, ElectronConfiguration,  everything())  
       
-      print(df3)
+      print(df2)
     })
     
-  
+###### unused stats #####  
     
     output$summary <- renderTable({
       
@@ -304,6 +331,56 @@ server <- function(input, output) {
       
     })
     
+    
+##### print statements ####    
+    
+    output$printme <- renderText({
+      
+      df2 <- df %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
+        select(AtomicNum, Symbol, Element, input$quals, input$quants) %>% 
+        arrange(desc(.[[5]])) 
+      
+      df3 <- head(df2, 1) %>%
+        pull(Element)
+      print(paste0("Which element with the selected properies has the higest ",  input$quants,  "? ",df3, sep = ""))
+    })
+    
+    
+    output$printme2 <- renderText({
+      
+      df2 <- df %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
+        select(AtomicNum, Symbol, Element, input$quals, input$quants) %>% 
+        arrange(desc(.[[5]]))  %>%
+        drop_na()
+      
+      df3 <- tail(df2, 1) %>%
+        pull(Element)
+      print(paste0("Which element with the selected properies has the lowest ",  input$quants,  "? ",df3, sep = ""))
+    })
+    
+    output$printme3 <- renderText({
+      
+      mytext <-  input$types 
+      print(mytext)
+    })
+    
+    output$printme4 <- renderText({
+      
+      mytext <-  input$phases 
+      print(mytext)
+      
+    })
+    
+
+  
+    
+    
+    
+###### closing ####    
     
     
 }
