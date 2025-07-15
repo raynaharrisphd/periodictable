@@ -132,7 +132,9 @@ ui <- fluidPage(
                                choices = phases, selected = natural),
             br(),
             checkboxGroupInput("types", label = "Select: Element Type", 
-                               choices = types, selected = displayfirst)
+                               choices = types, selected = displayfirst),
+            br(),
+            downloadButton("downloadTable", "Download Table")
         ),
 
         mainPanel(
@@ -141,30 +143,16 @@ ui <- fluidPage(
            br(),
            plotOutput("barplot"),
            br(),
-           plotOutput("boxplot"),
-           br(),
-           #p("Data Averaged across Elements with Similar Properties"),
-           #tableOutput('summary'),
-           br(),
-           #h5("Table 1: Differences"),
-           #p("The table below shows shows the top five biggest differences in quantitative variation between two variables. Stars next to the p.adj  column indicate statistical significance (p.adj < 0.05)."),
-           #tableOutput('stats'),
-           h5("Table 1: Element Data"),
-           p("This table contains all the data for the elements in the graphs above, arranges from smallest to largest for the selected quantitative variable."),
-           tableOutput('table'),
-           br(),
-           h5("Summary"),
-           p("Data included are from the following element types and phases: " ),
-           br(),
-           textOutput('printme3'),
-           br(),
-           textOutput('printme4'), 
-           br(),
-           h5("Question and Answer"),
            br(),
            textOutput('printme'),
+           textOutput('printme2'),
            br(),
-           textOutput('printme2')
+           plotOutput("boxplot"),
+           br(),
+           br(),
+           h5("Table 1: Element Data"),
+           p("This table contains all the data for the elements in the graphs above, arranges from smallest to largest for the selected quantitative variable."),
+           tableOutput('table')
            
         )
     )
@@ -223,8 +211,7 @@ server <- function(input, output) {
       p <- ggplot(df2, aes(x = AtomicNum , y = Measure, 
                            fill = Variable, label = Symbol)) +
         geom_bar(stat = "identity") +
-        geom_text(check_overlap = TRUE, 
-                  label.padding = 0.5) +
+        geom_text(check_overlap = TRUE) +
         theme_classic() +
         labs(fill = input$quals,
              x = "Atomic Number",
@@ -243,7 +230,8 @@ server <- function(input, output) {
       
       df2 <- df %>%
         mutate(Type = factor(Type, levels = myorder)) %>%
-        filter(Type %in% input$types) %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
         select(Variable, Measure)  %>%
@@ -276,12 +264,6 @@ server <- function(input, output) {
         select(AtomicNum, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
         arrange(desc(.[[7]])) %>%
         drop_na()
-      
-      pubchem <- pubchem %>%
-        select(-ElectronAffinity)
-      df3 <- inner_join(df2, pubchem) %>%
-        select(AtomicNum, Symbol, Element, Period, Group, ElectronConfiguration,  everything())  
-      
       print(df2)
     })
     
@@ -364,22 +346,23 @@ server <- function(input, output) {
       print(paste0("Which element with the selected properies has the lowest ",  input$quants,  "? ",df3, sep = ""))
     })
     
-    output$printme3 <- renderText({
-      
-      mytext <-  input$types 
-      print(mytext)
-    })
-    
-    output$printme4 <- renderText({
-      
-      mytext <-  input$phases 
-      print(mytext)
-      
-    })
-    
 
-  
+##### save table #####
     
+    # Generate a sample table
+    output$myTable <- renderTable({
+      head(mtcars)
+    })
+    
+    # Handle the download
+    output$downloadTable <- downloadHandler(
+      filename = function() {
+        "periodictabledata.csv"
+      },
+      content = function(file) {
+        write.csv(head(mtcars), file, row.names = FALSE)
+      }
+    )
     
     
 ###### closing ####    
