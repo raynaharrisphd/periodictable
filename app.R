@@ -38,10 +38,13 @@ natural <- c( "solid", "liq" , "gas" )
 phaselevels <- c("solid", "liq", "gas", "artificial")
 
 colsofinterest <- c("Type", "Density", "Electronegativity",  "NumberOfIsotopes",
-                    "Phase" ,  "Radioactive", "AtomicRadius", "ValenceElectrons", "NumberofNeutrons" )
+                    "Phase" ,  "Radioactive", "AtomicRadius", "ValenceElectrons",
+                    "SpecificHeat", "NumberofNeutrons" )
 
 quals <- c(  "Phase", "Radioactive" , "Type",  "ValenceElectrons")
-quants <- c("Density",  "ElectronAffinity", "Electronegativity", "AtomicMass",    "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons","AtomicRadius" )
+
+quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity", "Electronegativity", 
+            "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons", "SpecificHeat" )
 
 ####### Data wrangle #######
 
@@ -64,7 +67,7 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          ) %>%
   rename("ValenceElectrons" = "NumberofValence") %>%
   select(AtomicNumber, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
-  mutate(NewLabel = paste(AtomicNumber, Symbol, sep = "\n"),
+  mutate(NumSymbol = paste(AtomicNumber, Symbol, sep = "\n"),
          Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
   mutate(Type = factor(Type, levels = myorder),
          Phase = factor(Phase, levels = phaselevels)) %>%
@@ -132,10 +135,10 @@ ui <- fluidPage(
             checkboxGroupInput("types", label = "Select: Element Type", 
                                choices = types, selected = displayfirst),
             br(),
-            downloadButton("downloadTable2", "Download the table displayed"),
+            downloadButton("downloadTable", "Download the table displayed"),
             br(),
             br(),
-            downloadButton("downloadTable", "Download the full dataset")
+            downloadButton("downloadDataSet", "Download the full dataset")
         ),
 
         mainPanel(
@@ -155,7 +158,11 @@ ui <- fluidPage(
            br(),
            h5("Table 1: Element Data"),
            p("This table contains all the data for the elements in the graphs above, arranges from smallest to largest for the selected quantitative variable."),
-           tableOutput('table')
+           tableOutput('table'),
+           br(),
+           h5("Dataset 1: Periodic Table Data Preview"),
+           p("This table provides a preview (first 5 elelements) of a dataset containg 20 descriptive, qualitative, and quantitaitve variables for 117 elements. Scoll down to view all the variables. (Note, data rotated 90 degrees for easy viewing.) Click the download button above to save and open the full dataset. "),
+           tableOutput('myTable')
            
         )
     )
@@ -177,11 +184,11 @@ server <- function(input, output) {
                Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants) %>%
-        select(Group, Period, NewLabel, Variable, Measure) %>%
+        select(Group, Period, NumSymbol, Variable, Measure) %>%
         drop_na()
     
       p <- ggplot(df2, aes(x = Group, y = Period, 
-                           label = NewLabel, 
+                           label = NumSymbol, 
                            color = Variable)) +
         geom_point(aes(size = Measure)) +
         geom_text(check_overlap = TRUE, nudge_y = 0.5,
@@ -191,7 +198,7 @@ server <- function(input, output) {
         theme_classic() +
         labs(color = input$quals, size = input$quants,
              title = "Periodic Table of Elements",
-             subtitle = paste0("Color: ", input$quals, ", Size: ", input$quants, sep = "")) 
+             subtitle = paste0("Color: ", input$quals, ", Size: ", input$quants, " (Not to Scale)",sep = "")) 
       print(p)
     })
     
@@ -244,7 +251,7 @@ server <- function(input, output) {
       
       p <- ggplot(df2, aes(x = Variable, y = Measure, 
                            color = Variable)) +
-        geom_boxplot() +
+        geom_boxplot(outliers = FALSE) +
         geom_jitter() +
         theme_classic() +
         labs(x = input$quals,
@@ -260,7 +267,7 @@ server <- function(input, output) {
       df2 <- df %>%
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
-        mutate(AtomicNum = as.factor(AtomicNumber),
+        mutate(AtomicNumber = as.factor(AtomicNumber),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
         select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
@@ -331,7 +338,7 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Element)
-      print(paste0("Which element with the selected properies has the higest ",  input$quants,  "? ",df3, sep = ""))
+      print(paste0(df3, " has the higest ",  input$quants, "of the elelments displayed above.", sep = ""))
     })
     
     
@@ -345,7 +352,7 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Element)
-      print(paste0("Which element with the selected properies has the lowest ",  input$quants,  "? ",df3, sep = ""))
+      print(paste0(df3, " has the lowest ",  input$quants,  " of the elelments displayed above.", sep = ""))
     })
     
     
@@ -358,12 +365,12 @@ server <- function(input, output) {
                "Measure" = input$quants)  %>%
         select(AtomicNumber, Symbol, Element, Variable, Measure) %>% 
         group_by(Variable)   %>%
-        summarize(Mean = mean(Measure)) %>%
+        summarize(Mean = mean(Measure, na.rm = T)) %>%
         arrange(desc(Mean))
       
       df3 <- head(df2, 1) %>%
         pull(Variable)
-      print(paste0("Which group of elements with the selected properies has the highest average ", input$quants, "? ", df3, sep = ""))
+      print(paste0(df3, " have the highest group average ", input$quants, "of the elements displayed above.", sep = ""))
     })
     
     output$printme4 <- renderText({
@@ -375,12 +382,12 @@ server <- function(input, output) {
                "Measure" = input$quants)  %>%
         select(AtomicNumber, Symbol, Element, Variable, Measure) %>% 
         group_by(Variable)   %>%
-        summarize(Mean = mean(Measure)) %>%
+        summarize(Mean = mean(Measure, na.rm = TRUE)) %>%
         arrange(Mean)
       
       df3 <- head(df2, 1) %>%
         pull(Variable)
-      print(paste0("Which group of elements with the selected properies has the lowest average ", input$quants, "? ", df3, sep = ""))
+      print(paste0(df3, " have the lowest group average ", input$quants, "of the elements displayed above.", sep = ""))
     })
     
 
@@ -388,21 +395,43 @@ server <- function(input, output) {
     
     # Generate a sample table
     output$myTable <- renderTable({
-      head(mtcars)
+      
+      df2 <- df %>%
+        select("AtomicNumber","Element", "Symbol", "AtomicMass" , 
+               "NumberofProtons", "NumberofNeutrons" , 
+               "ElectronConfiguration", "Period" , "Group" , 
+               "Phase" ,"Radioactive", "Type" , "ValenceElectrons", 
+               everything()) %>%
+        select(-NumSymbol) %>%
+        mutate(AtomicNumber = as.factor(AtomicNumber)) %>%
+        head()
+      
+      head(df2)
+      df3 <- as.tibble(t(df2)) 
+      colnames(df3) <- df3[3,]
+      df3 <- as.data.frame(df3)
+      rownames(df3) <- colnames(df2)
+      df3 <- df3 %>%
+        mutate(" " = rownames(.)) %>%
+        select(" ", everything())
+      head(df3)
+      print(df3)
+
     })
     
     # Handle the download
-    output$downloadTable <- downloadHandler(
+    output$downloadDataSet <- downloadHandler(
       filename = function() {
         "periodictabledata.csv"
       },
       content = function(file) {
         
         df2 <- df %>%
-          #filter(Type %in% input$types,
-          #       Phase %in% input$phases) %>%
           select("AtomicNumber","Element", "Symbol", "AtomicMass" , 
-                 "NumberofProtons", "NumberofNeutrons" ,  "ElectronConfiguration", "Period" , "Group" , "Phase" ,"Radioactive", "Type" , "ValenceElectrons",  everything())
+                 "NumberofProtons", "NumberofNeutrons" , 
+                 "ElectronConfiguration", "Period" , "Group" , 
+                 "Phase" ,"Radioactive", "Type" , "ValenceElectrons", 
+                 everything())
         head(df2)
           
         write.csv(df2, file, row.names = FALSE)
@@ -410,7 +439,7 @@ server <- function(input, output) {
     )
     
     # Handle the download
-    output$downloadTable2 <- downloadHandler(
+    output$downloadTable <- downloadHandler(
       filename = function() {
         myfilename <- paste0("periodictabledata-", input$quals, "-", input$quants, ".csv")
         myfilename
