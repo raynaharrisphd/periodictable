@@ -18,6 +18,7 @@ library(rstatix)
 library(forcats)
 
 # create file with dependencies for hosting
+# rerun if adding new packages
 #library(rsconnect)
 #rsconnect::writeManifest()
 
@@ -112,7 +113,7 @@ ui <- fluidPage(
            #p("The table below shows shows the top five bigest differences in quantitative variation between two variables. Stars next to the p.adj  column indicate statistical significance (p.adj < 0.05)."),
            #tableOutput('stats'),
            h5("Table 1: Element Data"),
-           p("This table contains all the data for the elements in the graphs above."),
+           p("This table contains all the data for the elements in the graphs above, arranges from smallest to largest for the selected quantitative variable."),
            tableOutput('table'),
            br()
            
