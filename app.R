@@ -150,6 +150,8 @@ ui <- fluidPage(
            br(),
            plotOutput("boxplot"),
            br(),
+           textOutput('printme3'),
+           textOutput('printme4'),
            br(),
            h5("Table 1: Element Data"),
            p("This table contains all the data for the elements in the graphs above, arranges from smallest to largest for the selected quantitative variable."),
@@ -165,7 +167,6 @@ ui <- fluidPage(
 # Define server logic 
 server <- function(input, output) {
 
-  
 #### periodictable #### 
   
     output$periodictable <- renderPlot({
@@ -345,6 +346,41 @@ server <- function(input, output) {
       df3 <- head(df2, 1) %>%
         pull(Element)
       print(paste0("Which element with the selected properies has the lowest ",  input$quants,  "? ",df3, sep = ""))
+    })
+    
+    
+    output$printme3 <- renderText({
+      
+      df2 <- df %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
+        rename("Variable" = input$quals,
+               "Measure" = input$quants)  %>%
+        select(AtomicNumber, Symbol, Element, Variable, Measure) %>% 
+        group_by(Variable)   %>%
+        summarize(Mean = mean(Measure)) %>%
+        arrange(desc(Mean))
+      
+      df3 <- head(df2, 1) %>%
+        pull(Variable)
+      print(paste0("Which group of elements with the selected properies has the highest average ", input$quants, "? ", df3, sep = ""))
+    })
+    
+    output$printme4 <- renderText({
+      
+      df2 <- df %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
+        rename("Variable" = input$quals,
+               "Measure" = input$quants)  %>%
+        select(AtomicNumber, Symbol, Element, Variable, Measure) %>% 
+        group_by(Variable)   %>%
+        summarize(Mean = mean(Measure)) %>%
+        arrange(Mean)
+      
+      df3 <- head(df2, 1) %>%
+        pull(Variable)
+      print(paste0("Which group of elements with the selected properies has the lowest average ", input$quants, "? ", df3, sep = ""))
     })
     
 
