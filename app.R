@@ -42,9 +42,10 @@ quants <- c( "Mass", "Density", "Radius",  "Electronegativity",  "NumIsotopes" )
 
 ####### Data wrangle #######
 
-test <- read_csv("PubChemElements_all.csv") %>%
-  select(Symbol,ElectronConfiguration)
-test
+pubchem <- read_csv("PubChemElements_all.csv") %>%
+  select(Name, ElectronConfiguration) %>%
+  rename("Element" = "Name")
+pubchem
 
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   mutate(NumberofValence = as.factor(NumberofValence),
@@ -63,15 +64,29 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
   mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"),
          Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
-  filter(Type %in% myorder) %>%
+  #filter(Type %in% myorder) %>%
   mutate(Type = factor(Type, levels = myorder)) 
+
 
 df[85, 7] = "Halogen"
 df[86, 7] = "Noble Gas"
 df[87, 7] = "Alkali Metal"
 df[88, 7] = "Alkaline Earth Metal"
+df[104, 7] = "Transition Metal"
+df[105, 7] = "Transition Metal"
+df[106, 7] = "Transition Metal"
+df[107, 7] = "Transition Metal"
+df[108, 7] = "Transition Metal"
+df[109, 7] = "Transition Metal"
+df[110, 7] = "Transition Metal"
+df[111, 7] = "Transition Metal"
+df[112, 7] = "Transition Metal"
+df[113, 7] = "Metal"
+df[114, 7] = "Metal"
+df[115, 7] = "Metal"
+df[116, 7] = "Metal"
+df[117, 7] = "Halogen"
 
-df
 
 types <- levels(df$Type)
 elements <- levels(df$Element)
@@ -232,7 +247,7 @@ server <- function(input, output) {
         select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants) %>% 
         arrange(.[[7]])
       
-      df3 <- inner_join(df2, test) %>%
+      df3 <- inner_join(df2, pubchem) %>%
         select(AtomicNum, Symbol, Element, Group, Period, ElectronConfiguration, everything()) 
       
       print(df3)
