@@ -21,7 +21,7 @@ library(forcats)
 #library(rsconnect)
 #rsconnect::writeManifest()
 
-####### Data wrangle #######
+####### Lists #######
 
 # inputs
 myorder <- c("Alkali Metal", "Alkaline Earth Metal", "Lanthanide" ,
@@ -36,12 +36,11 @@ displayfirst <- c("Alkali Metal", "Alkaline Earth Metal", "Metal",
 colsofinterest <- c("Type", "Density", "Electronegativity",  "NumIsotopes",
                     "Phase" ,  "Radioactive", "Radius", "ValenceNum", "Mass" )
 
-quals <- c("Type", "Phase",  "Radioactive", "ValenceNum" )
-quants <- c("Density", "Electronegativity", "Radius", "Mass", "NumIsotopes" )
+quals <- c("Type",  "Phase", "Radioactive", "ValenceNum" )
+quants <- c( "Mass", "Density", "Radius",  "Electronegativity",  "NumIsotopes" )
 
-# data
+####### Data wrangle #######
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
-  #filter(AtomicRadius > 0)  %>%
   mutate(NumberofValence = as.factor(NumberofValence),
          Type = as.factor(Type),
          Year = as.factor(Year),
@@ -58,7 +57,8 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
   mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"),
          Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
-  filter(Type %in% myorder)
+  filter(Type %in% myorder) %>%
+  mutate(Type = factor(Type, levels = myorder)) 
 
 types <- levels(df$Type)
 elements <- levels(df$Element)
@@ -66,7 +66,8 @@ elements <- levels(df$Element)
 mybreaks <- df %>%
   filter(Group == 1) %>%
   pull(AtomicNum)
-mybreaks
+
+mybreaks[8] <- 119
 
 ####### Shiny  UI #######
 
@@ -95,9 +96,9 @@ ui <- fluidPage(
            br(),
            plotOutput("periodictable"),
            br(),
-           plotOutput("boxplot"),
-           br(),
            plotOutput("barplot"),
+           br(),
+           plotOutput("boxplot"),
            br(),
            p("Data Averaged across Elements with Similar Properties"),
            tableOutput('summary'),
@@ -124,7 +125,8 @@ server <- function(input, output) {
         filter(Type %in% input$types) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants) %>%
-        select(Group, Period, NewLabel, Variable, Measure) 
+        select(Group, Period, NewLabel, Variable, Measure) %>%
+        drop_na()
     
       p <- ggplot(df2, aes(x = Group, y = Period, 
                            label = NewLabel, 
@@ -137,8 +139,7 @@ server <- function(input, output) {
         theme_classic() +
         labs(color = input$quals, size = input$quants,
              title = "Periodic Table of Elements",
-             subtitle = paste0("Color: ", input$quals, ", Size: ", input$quants, sep = "")) +
-        theme(legend.position = "bottom")
+             subtitle = paste0("Color: ", input$quals, ", Size: ", input$quants, sep = "")) 
       print(p)
     })
     
@@ -152,18 +153,17 @@ server <- function(input, output) {
         filter(Type %in% input$types) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
-        select(AtomicNum, Symbol, Variable, Measure) 
+        select(AtomicNum, Symbol, Variable, Measure)  %>%
+        drop_na()
       
-      mytitle = paste0("Barplot of ", input$quants, 
-                       " by Atomic Number",  sep = "" )  
+      mytitle = paste0("Barplot of Increasing ", input$quants, sep = "" )  
 
-      p <- ggplot(df2, aes(x = AtomicNum, y = Measure, 
+      p <- ggplot(df2, aes(x = AtomicNum , y = Measure, 
                            fill = Variable, label = Symbol)) +
         geom_bar(stat = "identity") +
         geom_text(check_overlap = TRUE, 
                   label.padding = 0.5) +
         theme_classic() +
-        theme(legend.position = "bottom") +
         labs(fill = input$quals,
              x = "Atomic Number",
              y = input$quants,
@@ -197,8 +197,8 @@ server <- function(input, output) {
         theme_classic() +
         labs(x = input$quals,
              y = input$quants,
-             title = mytitle) +
-        theme(legend.position = "none")  
+             title = mytitle,
+             color = NULL)  
         
       print(p)
     })
@@ -219,10 +219,11 @@ server <- function(input, output) {
     output$summary <- renderTable({
       
       df2 <- df %>%
-        select(input$quals, input$quants)
+        select(input$quals, input$quants) 
       newcolname <- colnames(df2) 
     
       df3 <- df %>%
+        mutate(Type = factor(Type, levels = myorder)) %>%
         filter(Type %in% input$types) %>%
         mutate(AtomicNum = as.factor(AtomicNum),
                Group = as.factor(Group),
@@ -230,8 +231,10 @@ server <- function(input, output) {
                Type = as.factor(Type)) %>%
         rename("Groups" = input$quals,
                "Measure" = input$quants)  %>%
+        select(Groups, Measure)  %>%
+        #drop_na() %>%
         group_by(Groups) %>%
-        summarise(Mean = mean(Measure)) 
+        summarise(Mean = mean(Measure, na.rm = T)) 
       
       colnames(df3) <- newcolname
       print(df3)
