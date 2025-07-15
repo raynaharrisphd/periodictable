@@ -53,10 +53,10 @@ pubchem <- read_csv("PubChemElements_all.csv") %>%
   rename("Element" = "Name") 
 pubchem
 
-github <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
+github <- read_excel("DataAnalysisofAtoms.xlsx") %>%
   select(-AtomicMass)
 
-df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
+df <- read_excel("DataAnalysisofAtoms.xlsx") %>%
   mutate(NumberofValence = as.factor(NumberofValence),
          Type = as.factor(Type),
          Year = as.factor(Year),
