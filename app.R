@@ -24,19 +24,24 @@ library(forcats)
 ####### Data wrangle #######
 
 # inputs
-myorder <- c("Alkali Metal", "Alkaline Earth Metal", "Lanthanide" , "Transition Metal" ,
+myorder <- c("Alkali Metal", "Alkaline Earth Metal", "Lanthanide" ,
+             "Actinide" , "Transactinide", "Transition Metal" ,
               "Metal",  "Metalloid", "Nonmetal" , 
              "Halogen"  , "Noble Gas" )
+
+displayfirst <- c("Alkali Metal", "Alkaline Earth Metal", "Metal",  
+                 "Metalloid", "Nonmetal", 
+                 "Halogen"  , "Noble Gas" )
 
 colsofinterest <- c("Type", "Density", "Electronegativity",  "NumIsotopes",
                     "Phase" ,  "Radioactive", "Radius", "ValenceNum", "Mass" )
 
 quals <- c("Type", "Phase",  "Radioactive", "ValenceNum" )
-quants <- c("Density", "Electronegativity", "Mass", "NumIsotopes","Radius" )
+quants <- c("Density", "Electronegativity", "Radius", "Mass", "NumIsotopes" )
 
 # data
 df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
-  filter(AtomicRadius > 0)  %>%
+  #filter(AtomicRadius > 0)  %>%
   mutate(NumberofValence = as.factor(NumberofValence),
          Type = as.factor(Type),
          Year = as.factor(Year),
@@ -52,11 +57,16 @@ df <- read_excel("Lab.XX_DataAnalysisofAtoms.xlsx") %>%
          "Radius"= "AtomicRadius",) %>%
   select(AtomicNum, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
   mutate(NewLabel = paste(AtomicNum, Symbol, sep = "\n"),
-         Radioactive = fct_na_value_to_level(Radioactive, "no"))
+         Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
+  filter(Type %in% myorder)
 
 types <- levels(df$Type)
 elements <- levels(df$Element)
 
+mybreaks <- df %>%
+  filter(Group == 1) %>%
+  pull(AtomicNum)
+mybreaks
 
 ####### Shiny  UI #######
 
@@ -71,42 +81,28 @@ ui <- fluidPage(
         sidebarPanel(
             #radioButtons("colsofinterest", label = "Visualize Qualitative Properties", choices = colsofinterest),
             h4("Customize the Periodic Table"),
-            radioButtons("quals", label = "Color: Qualitative Properties", choices = quals),
-            radioButtons("quants", label = "Scale: Quantitative Prorties", choices = quants),
+            radioButtons("quals", label = "Color: Qualitative Properties", 
+                         choices = quals),
             br(),
+            radioButtons("quants", label = "Scale: Quantitative Prorties", 
+                         choices = quants),
             br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            br(),
-            h4("Explore the Dataset"),
-            radioButtons("types", label = "Filter the Elements by Type", choices = types)
+            checkboxGroupInput("types", label = "Filter: Element Type", 
+                               choices = types, selected = displayfirst)
         ),
 
         mainPanel(
            br(),
-           plotOutput("radiobutton"),
-           plotOutput("radiobutton2"),
+           plotOutput("periodictable"),
            br(),
+           plotOutput("boxplot"),
            br(),
-           p("Table of Elments"),
+           plotOutput("barplot"),
+           br(),
+           p("Data Averaged across Elements with Similar Properties"),
+           tableOutput('summary'),
+           br(),
+           p("Data for Elements in the Graphs Above"),
            tableOutput('table')
         )
     )
@@ -118,10 +114,14 @@ ui <- fluidPage(
 # Define server logic 
 server <- function(input, output) {
 
-    output$radiobutton <- renderPlot({
+  
+#### periodictable #### 
+  
+    output$periodictable <- renderPlot({
       
       df2 <- df %>%
         mutate(Type = factor(Type, levels = myorder)) %>%
+        filter(Type %in% input$types) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants) %>%
         select(Group, Period, NewLabel, Variable, Measure) 
@@ -137,23 +137,58 @@ server <- function(input, output) {
         theme_classic() +
         labs(color = input$quals, size = input$quants,
              title = "Periodic Table of Elements",
-             subtitle = input$colsofinterest) +
+             subtitle = paste0("Color: ", input$quals, ", Size: ", input$quants, sep = "")) +
         theme(legend.position = "bottom")
       print(p)
     })
     
   
+##### barplot ####
     
-    output$radiobutton2 <- renderPlot({
+    output$barplot <- renderPlot({
       
       df2 <- df %>%
         mutate(Type = factor(Type, levels = myorder)) %>%
+        filter(Type %in% input$types) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
-        select(Variable, Measure) 
+        select(AtomicNum, Symbol, Variable, Measure) 
+      
+      mytitle = paste0("Barplot of ", input$quants, 
+                       " by Atomic Number",  sep = "" )  
+
+      p <- ggplot(df2, aes(x = AtomicNum, y = Measure, 
+                           fill = Variable, label = Symbol)) +
+        geom_bar(stat = "identity") +
+        geom_text(check_overlap = TRUE, 
+                  label.padding = 0.5) +
+        theme_classic() +
+        theme(legend.position = "bottom") +
+        labs(fill = input$quals,
+             x = "Atomic Number",
+             y = input$quants,
+             title = mytitle) +
+        scale_x_continuous(breaks = mybreaks)
+      print(p)
+      
+      
+    })
+    
+    
+##### boxplot ####  
+    
+    output$boxplot <- renderPlot({
+      
+      df2 <- df %>%
+        mutate(Type = factor(Type, levels = myorder)) %>%
+        filter(Type %in% input$types) %>%
+        rename("Variable" = input$quals,
+               "Measure" = input$quants)  %>%
+        select(Variable, Measure)  %>%
+        drop_na()
         
-      mytitle = paste0("Graph of ", input$quants, 
-                       " by Element ", input$quals, sep = "" )  
+      mytitle = paste0("Boxplot of ", input$quants, 
+                       " by ", input$quals,  sep = "" )  
       
       p <- ggplot(df2, aes(x = Variable, y = Measure, 
                            color = Variable)) +
@@ -163,8 +198,7 @@ server <- function(input, output) {
         labs(x = input$quals,
              y = input$quants,
              title = mytitle) +
-        theme(legend.position = "none")  #+
-        #geom_pwc(group.by="Type", hide.ns=TRUE )
+        theme(legend.position = "none")  
         
       print(p)
     })
@@ -172,12 +206,35 @@ server <- function(input, output) {
     output$table <- renderTable({
       
       df2 <- df %>%
-        filter(Type == input$types) %>%
+        filter(Type %in% input$types) %>%
         mutate(AtomicNum = as.factor(AtomicNum),
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
-        select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants, Mass, Radius, everything()) 
-      df2
+        select(AtomicNum, Symbol, Element, Group, Period, input$quals, input$quants) 
+      print(df2)
+    })
+    
+  
+    
+    output$summary <- renderTable({
+      
+      df2 <- df %>%
+        select(input$quals, input$quants)
+      newcolname <- colnames(df2) 
+    
+      df3 <- df %>%
+        filter(Type %in% input$types) %>%
+        mutate(AtomicNum = as.factor(AtomicNum),
+               Group = as.factor(Group),
+               Period = as.factor(Period),
+               Type = as.factor(Type)) %>%
+        rename("Groups" = input$quals,
+               "Measure" = input$quants)  %>%
+        group_by(Groups) %>%
+        summarise(Mean = mean(Measure)) 
+      
+      colnames(df3) <- newcolname
+      print(df3)
     })
     
     
