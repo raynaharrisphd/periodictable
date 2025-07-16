@@ -35,15 +35,7 @@ quals <- c("Block",  "Phase", "Natural","Radioactive" , "Type", "NumberofValence
 quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity", "Electronegativity", "IonizationEnergy", 
             "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons", 
             "ThermalConductivity","VanDerWaalsRadius")
-
-# color palets
-
-typecolors <- c("Alkali metal", "Alkaline earth metal", "Lanthanide" ,
-                "Actinide" ,  "Transition metal" ,
-                "Post-transition metal",  "Metalloid", "Nonmetal" , 
-                "Halogen"  , "Noble gas" )
-
-
+yesnolevels <- c("Yes", "No")
 
 ####### Data import #######
 
@@ -53,7 +45,9 @@ df <- read_csv("elements.csv") %>%
          Element = as.factor(Element),
          NumberofValence = as.factor(NumberofValence)) %>%
   mutate(Type = factor(Type, levels = types),
-         Block = factor(Block, levels = blocks)) %>%
+         Block = factor(Block, levels = blocks),
+         Natural = factor(Natural, levels = yesnolevels),
+         Radioactive = factor(Radioactive, levels = yesnolevels)) %>%
   
   replace_na(list(Phase = "Unknown")) %>%
   mutate(Phase = as.factor(Phase))

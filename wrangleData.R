@@ -59,23 +59,23 @@ elements <- full_join(temp1, temp2, by = c("AtomicNumber", "Symbol"))  %>%
          Block, ElectronConfig, NobleGasConfig,
          NumberofValence, NumberofShells,
          everything(), -AbundanceCrust, -AbundanceUniverse)   %>%
+         replace_with_na_all(~.x == "")  %>%
   mutate(across(c("Discovery"),~ifelse(.x<1600,NA,.x)),
          Phase = as.factor(Phase),
-         Radioactive = replace_na("no"),
-         Natural = replace_na("no"),
          Phase = fct_collapse(Phase,
                          Solid = c("Solid",
                                    "Expected to be a Solid"),
                          Liquid = c("Liquid"),
                          Gas = c("Gas",
                                  "Expected to be a Gas"))) %>% 
-  replace_with_na_all(~.x == "")  %>%
   mutate(Natural = str_to_title(Natural),
          Radioactive = str_to_title(Radioactive),
          Appearance = str_to_title(Appearance)) %>%
   mutate(Period = ifelse(AtomicNumber >57 & AtomicNumber < 72, 6,
                     ifelse(AtomicNumber >89 & AtomicNumber < 104, 7, Period)),
          Group = ifelse(AtomicNumber >57 & AtomicNumber < 72, 3,
-                         ifelse(AtomicNumber >89 & AtomicNumber < 104, 3, Group)))
+                         ifelse(AtomicNumber >89 & AtomicNumber < 104, 3, Group)),
+         Radioactive = replace_na_with( Radioactive, "No"),
+         Natural = replace_na_with( Natural, "No"))
 
 write_csv(elements, "elements.csv", col_names = TRUE)
