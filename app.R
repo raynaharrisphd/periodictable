@@ -141,7 +141,7 @@ server <- function(input, output) {
       p <- ggplot(df2, aes(x = xpos, y = ypos, 
                            label = Symbol, 
                            color = Variable)) +
-        geom_point(aes(size = Measure)) +
+        geom_point(aes(size = Measure), shape = 15) +
         geom_text(check_overlap = TRUE, nudge_y = 0.5,
                   size = 4) +
         scale_y_reverse(breaks= c(1,2,3,4,5,6,7)) +

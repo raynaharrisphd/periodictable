@@ -79,3 +79,5 @@ elements <- full_join(temp1, temp2, by = c("AtomicNumber", "Symbol"))  %>%
          Natural = replace_na_with( Natural, "No"))
 
 write_csv(elements, "elements.csv", col_names = TRUE)
+write_csv(elements, "../elements/elements.csv", col_names = TRUE)
+
