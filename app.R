@@ -8,6 +8,7 @@
 #
 
 # available at <https://raynaharrisphd-periodictable.share.connect.posit.cloud/>
+# data from three sources. see json2csv.R
 
 library(shiny)
 library(tidyverse)
@@ -114,7 +115,9 @@ ui <- fluidPage(
            br(),
            h5("Dataset 1: Periodic Table Data Preview"),
            p("This table provides a preview (first 5 elelements) of a dataset containg 20 descriptive, qualitative, and quantitaitve variables for 117 elements. Scoll down to view all the variables. (Note, data rotated 90 degrees for easy viewing.) Click the download button above to save and open the full dataset. "),
-           tableOutput('myTable')
+           tableOutput('myTable'),
+           br(),
+           p("Data from <https://github.com/Bowserinator/Periodic-Table-JSON/blob/master/PeriodicTableCSV.csv>, <https://github.com/Bluegrams/periodic-table-data/blob/master/Periodica.Data/Data/ElementData.csv>, and <https://pubchem.ncbi.nlm.nih.gov/periodic-table/>, <https://gist.github.com/GoodmanSciences/c2dd862cd38f21b0ad36b8f96b4bf1ee#file-periodic-table-of-elements-csv>.")
            
         )
     )
@@ -137,7 +140,8 @@ server <- function(input, output) {
         rename("Variable" = input$quals,
                "Measure" = input$quants) %>%
         mutate(NumSymbol = paste0(AtomicNumber, Symbol, sep = '\n')) %>%
-        select(Group, Period, Symbol, Variable, Measure) 
+        select(Group, Period, Symbol, Variable, Measure) %>%
+        drop_na()
         
     
       p <- ggplot(df2, aes(x = Group, y = Period, 
@@ -163,9 +167,11 @@ server <- function(input, output) {
       df2 <- df %>%
         mutate(Type = factor(Type, levels = types)) %>%
         filter(Type %in% input$types) %>%
+        filter(Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
-        select(AtomicNumber, Symbol, Variable, Measure)  
+        select(AtomicNumber, Symbol, Variable, Measure)  %>%
+        drop_na() 
       
       mytitle = paste0("Barplot of ", input$quants, " by Atomic Number", sep = "" )  
 
@@ -195,7 +201,8 @@ server <- function(input, output) {
                Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
-        select(Variable, Measure)  
+        select(Variable, Measure)  %>%
+        drop_na()
         
       mytitle = paste0("Boxplot of ", input$quants, 
                        " by ", input$quals,  sep = "" )  
