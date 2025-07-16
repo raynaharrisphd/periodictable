@@ -1,6 +1,5 @@
 # setup
 
-library(tidyjson)
 library(dplyr)
 library(naniar)
 library(forcats)
@@ -15,9 +14,9 @@ library(forcats)
 df1 <- read_csv("PeriodicTableCSV.csv")
 df2 <- read_csv("ElementData.csv")
 df3 <- read_csv("PubChemElements_all.csv")
-df4 <- read.csv(url("https://gist.githubusercontent.com/GoodmanSciences/c2dd862cd38f21b0ad36b8f96b4bf1ee/raw/1d92663004489a5b6926e944c1b3d9ec5c40900e/Periodic%2520Table%2520of%2520Elements.csv"))
+df4 <- read_csv("periodictable.csv")
 
-
+names(df1)
 newnamesdf1 <- c("Element", "Appearance", "AtomicMass", "BoilingPoint", "Category", 
               "Density", "DiscoveredBy", "MeltingPoint", "MolarHeat",
               "NamedBy", "AtomicNumber", "Period", "Group", "Phase", "Source",
@@ -28,12 +27,14 @@ newnamesdf1 <- c("Element", "Appearance", "AtomicMass", "BoilingPoint", "Categor
 colnames(df1) <- newnamesdf1
 
 temp1 <- df1 %>%  
-  select(AtomicNumber, Symbol, Element, Appearance, ElectronConfig, ElectronConfig2) %>%
+  select(AtomicNumber, Symbol, Element, Appearance, ElectronConfig) %>%
   filter(Element != "Ununennium")
 
 temp2 <- df2  %>%
   select(AtomicNumber, Symbol, Group, Period, Block,
-         AtomicMass, Density, HeatCapacity:DiscoveredBy)
+         AtomicMass, Density, HeatCapacity:Discovery, DiscoveredBy, Configuration)
+colnames(temp2)[23] <- "NobleGasConfig"
+head(temp2)
 
 temp3 <- df3 %>% 
   select(AtomicNumber, Symbol, StandardState, GroupBlock)
@@ -41,32 +42,25 @@ colnames(temp3)[4] <- "Type"
 colnames(temp3)[3] <- "Phase"
 
 temp4 <- df4 %>%
-  select(AtomicNumber, Symbol, NumberofNeutrons, NumberofProtons, NumberofElectrons, Natural) 
-
-
-tail(temp4)
-
+  select(AtomicNumber, Symbol, NumberofNeutrons, NumberofProtons, NumberofElectrons, Natural, NumberofShells, NumberofValence, Radioactive) 
 
 elements <- full_join(temp1, temp2, by = c("AtomicNumber", "Symbol"))  %>%
   full_join(., temp3, by = c("AtomicNumber", "Symbol"))  %>%
   left_join(., temp4, by = c("AtomicNumber", "Symbol"))  %>%
   select(AtomicNumber, Symbol, Element, Type, 
          Natural, Phase, Radioactive, Group, Period, 
-         
-         Block, 
-         Appearance,
+         Block, Appearance, ElectronConfig, NobleGasConfig,
          everything())   %>%
   mutate(across(c("Discovery"),~ifelse(.x<1600,NA,.x))) %>%
-  mutate(across(where(~ all(.x %in% 0:1)), factor, labels = c("No", "Yes"))) %>%
-  mutate(Phase = as.factor(Phase))  %>%
+  mutate(Phase = as.factor(Phase),
+         Radioactive = replace_na("no"),
+         Natural = replace_na("no"))  %>%
   mutate(Phase = fct_collapse(Phase,
                          Solid = "Solid",
                          Liquid = "Liquid",
                          Gas = "Gas",
-                         "<NA>" = c("Expected to be a Gas","Expected to be a Solid"))) %>% replace_with_na_all(~.x == "<NA>") %>% 
-replace_with_na_all(~.x == "") 
+                         "Unknown" = c("Expected to be a Gas","Expected to be a Solid"))) %>% 
+  replace_with_na_all(~.x == "")  
+head(elements)
 
 write_csv(elements, "elements.csv", col_names = TRUE)
-
-
-

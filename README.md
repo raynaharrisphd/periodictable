@@ -8,4 +8,4 @@ Visit the shiny app to explore patterns of variation in properties of elements.
 
 ## Data Sources
 
-Data from multiples sources. See json2csv.R
+Data from multiples sources. See wrangleData.R
