@@ -25,90 +25,44 @@ library(forcats)
 ####### Lists #######
 
 # inputs
-myorder <- c("Alkali Metal", "Alkaline Earth Metal", "Lanthanide" ,
-             "Actinide" ,  "Transition Metal" ,
-              "Metal",  "Metalloid", "Nonmetal" , 
-             "Halogen"  , "Noble Gas" )
+types <- c("Alkali metal", "Alkaline earth metal", "Lanthanide" ,
+             "Actinide" ,  "Transition metal" ,
+              "Post-transition metal",  "Metalloid", "Nonmetal" , 
+             "Halogen"  , "Noble gas" )
 
-displayfirst <- c("Alkali Metal", "Alkaline Earth Metal", "Metal",  
+displayfirst <- c("Alkali metal", "Alkaline earth metal", "Post-transition metal",  
                  "Metalloid", "Nonmetal", 
-                 "Halogen"  , "Noble Gas" )
+                 "Halogen"  , "Noble gas" )
 
-natural <- c( "solid", "liq" , "gas" )
-phaselevels <- c("solid", "liq", "gas", "artificial")
+phaselevels <- c( "Solid", "Liquid" , "Gas" )
+natural <- phaselevels
 
-colsofinterest <- c("Type", "Density", "Electronegativity",  "NumberOfIsotopes",
-                    "Phase" ,  "Radioactive", "AtomicRadius", "ValenceElectrons",
-                    "SpecificHeat", "NumberofNeutrons" )
+quals <- c("Block",  "Phase", "Natural","Radioactive" , "Type" )
 
-quals <- c(  "Phase", "Radioactive" , "Type",  "ValenceElectrons")
+quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity", "Electronegativity", "IonizationEnergy", 
+            "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons", 
+            "ThermalConductivity","VanDerWaalsRadius")
 
-quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity", "Electronegativity", 
-            "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons", "SpecificHeat" )
+colsofinterest <- c(quals, quants)
 
 ####### Data wrangle #######
 
-pubchem <- read_csv("PubChemElements_all.csv") %>%
-  select(Name, ElectronConfiguration, ElectronAffinity, AtomicMass) %>%
-  rename("Element" = "Name") 
-pubchem
-
-github <- read_excel("DataAnalysisofAtoms.xlsx") %>%
-  select(-AtomicMass)
-
-df <- read_excel("DataAnalysisofAtoms.xlsx") %>%
-  mutate(NumberofValence = as.factor(NumberofValence),
+df <- read_csv("elements.csv") %>%
+  mutate(#AtomicNumber = as.factor(AtomicNumber),
+         #Group = as.factor(Group),
+         #Period = as.factor(Period),
+         Block = as.factor(Block),
          Type = as.factor(Type),
-         Year = as.factor(Year),
          Phase = as.factor(Phase),
-         Radioactive = as.factor(Radioactive), 
-         NumberofValence = as.factor(NumberofValence),
-         Element = as.factor(Element)
-         ) %>%
-  rename("ValenceElectrons" = "NumberofValence") %>%
-  select(AtomicNumber, Group, Period, Symbol, Element, NumberofProtons, all_of(colsofinterest)) %>%
-  mutate(NumSymbol = paste(AtomicNumber, Symbol, sep = "\n"),
-         Radioactive = fct_na_value_to_level(Radioactive, "no")) %>%
-  mutate(Type = factor(Type, levels = myorder),
-         Phase = factor(Phase, levels = phaselevels)) %>%
-  left_join(., pubchem, by = "Element")
+         Element = as.factor(Element))
 
-levels(df$Phase)
-
-df[43, 7] = "Transition Metal"
-df[85, 7] = "Halogen"
-df[86, 7] = "Noble Gas"
-df[87, 7] = "Alkali Metal"
-df[88, 7] = "Alkaline Earth Metal"
-df[104, 7] = "Transition Metal"
-df[105, 7] = "Transition Metal"
-df[106, 7] = "Transition Metal"
-df[107, 7] = "Transition Metal"
-df[108, 7] = "Transition Metal"
-df[109, 7] = "Transition Metal"
-df[110, 7] = "Transition Metal"
-df[111, 7] = "Transition Metal"
-df[112, 7] = "Transition Metal"
-df[113, 7] = "Metal"
-df[114, 7] = "Metal"
-df[115, 7] = "Metal"
-df[116, 7] = "Metal"
-df[117, 7] = "Halogen"
-
-df[43, 11] = "solid"
-
-#Transition metal
-
-
-types <- levels(df$Type)
 elements <- levels(df$Element)
 phases <- levels(df$Phase)
 
-mybreaks <- df %>%
-  filter(Group == 1) %>%
-  pull(AtomicNumber)
 
-mybreaks[8] <- 119
+mybreaks <- df %>%
+  filter(Group == 18) %>%
+  pull(AtomicNumber)
 
 ####### Shiny  UI #######
 
@@ -179,21 +133,22 @@ server <- function(input, output) {
     output$periodictable <- renderPlot({
       
       df2 <- df %>%
-        mutate(Type = factor(Type, levels = myorder)) %>%
+        mutate(Type = factor(Type, levels = types)) %>%
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants) %>%
-        select(Group, Period, NumSymbol, Variable, Measure) %>%
-        drop_na()
+        mutate(NumSymbol = paste0(AtomicNumber, Symbol, sep = '\n')) %>%
+        select(Group, Period, Symbol, Variable, Measure) 
+        
     
       p <- ggplot(df2, aes(x = Group, y = Period, 
-                           label = NumSymbol, 
+                           label = Symbol, 
                            color = Variable)) +
         geom_point(aes(size = Measure)) +
         geom_text(check_overlap = TRUE, nudge_y = 0.5,
                   size = 4) +
-        scale_y_reverse(breaks= c(1,2,3,4,5,6,7)) +
+        scale_y_reverse(breaks= c(1,2,3,4,5,6,7,8)) +
         scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9,11,10,12,13,14,15,16,17,18)) +
         theme_classic() +
         labs(color = input$quals, size = input$quants,
@@ -208,12 +163,11 @@ server <- function(input, output) {
     output$barplot <- renderPlot({
       
       df2 <- df %>%
-        mutate(Type = factor(Type, levels = myorder)) %>%
+        mutate(Type = factor(Type, levels = types)) %>%
         filter(Type %in% input$types) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
-        select(AtomicNumber, Symbol, Variable, Measure)  %>%
-        drop_na()
+        select(AtomicNumber, Symbol, Variable, Measure)  
       
       mytitle = paste0("Barplot of ", input$quants, " by Atomic Number", sep = "" )  
 
@@ -238,7 +192,7 @@ server <- function(input, output) {
     output$boxplot <- renderPlot({
       
       df2 <- df %>%
-        mutate(Type = factor(Type, levels = myorder)) %>%
+        mutate(Type = factor(Type, levels = types)) %>%
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
@@ -285,7 +239,7 @@ server <- function(input, output) {
       newcolname <- colnames(df2) 
     
       df3 <- df %>%
-        mutate(Type = factor(Type, levels = myorder)) %>%
+        mutate(Type = factor(Type, levels = types)) %>%
         filter(Type %in% input$types) %>%
         mutate(AtomicNumber = as.factor(AtomicNumber),
                Group = as.factor(Group),
@@ -338,7 +292,7 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Element)
-      print(paste0(df3, " has the higest ",  input$quants, "of the elelments displayed above.", sep = ""))
+      print(paste0(df3, " has the higest ",  input$quants, " of the elelments displayed above.", sep = ""))
     })
     
     
@@ -370,7 +324,7 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Variable)
-      print(paste0(df3, " have the highest group average ", input$quants, "of the elements displayed above.", sep = ""))
+      print(paste0(df3, "s have the highest group average ", input$quants, "of the elements displayed above.", sep = ""))
     })
     
     output$printme4 <- renderText({
@@ -387,7 +341,7 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Variable)
-      print(paste0(df3, " have the lowest group average ", input$quants, "of the elements displayed above.", sep = ""))
+      print(paste0(df3, "s have the lowest group average ", input$quants, "of the elements displayed above.", sep = ""))
     })
     
 
@@ -399,14 +353,12 @@ server <- function(input, output) {
       df2 <- df %>%
         select("AtomicNumber","Element", "Symbol", "AtomicMass" , 
                "NumberofProtons", "NumberofNeutrons" , 
-               "ElectronConfiguration", "Period" , "Group" , 
-               "Phase" ,"Radioactive", "Type" , "ValenceElectrons", 
+               "ElectronConfig", "ElectronConfig2", "Period" , "Group" , 
+               "Phase" ,"Radioactive", "Type" , 
                everything()) %>%
-        select(-NumSymbol) %>%
         mutate(AtomicNumber = as.factor(AtomicNumber)) %>%
-        head()
+        head(., 5)
       
-      head(df2)
       df3 <- as.tibble(t(df2)) 
       colnames(df3) <- df3[3,]
       df3 <- as.data.frame(df3)
@@ -414,8 +366,7 @@ server <- function(input, output) {
       df3 <- df3 %>%
         mutate(" " = rownames(.)) %>%
         select(" ", everything())
-      head(df3)
-      print(df3)
+      return(df3)
 
     })
     
@@ -429,10 +380,9 @@ server <- function(input, output) {
         df2 <- df %>%
           select("AtomicNumber","Element", "Symbol", "AtomicMass" , 
                  "NumberofProtons", "NumberofNeutrons" , 
-                 "ElectronConfiguration", "Period" , "Group" , 
-                 "Phase" ,"Radioactive", "Type" , "ValenceElectrons", 
+                 "ElectronConfig", "Period" , "Group" , 
+                 "Phase" ,"Radioactive", "Type" , 
                  everything())
-        head(df2)
           
         write.csv(df2, file, row.names = FALSE)
       }
@@ -442,7 +392,6 @@ server <- function(input, output) {
     output$downloadTable <- downloadHandler(
       filename = function() {
         myfilename <- paste0("periodictabledata-", input$quals, "-", input$quants, ".csv")
-        myfilename
       },
       
       content = function(file) {
@@ -456,7 +405,6 @@ server <- function(input, output) {
           select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
           arrange(desc(.[[7]])) %>%
           drop_na()
-        print(df2)
         
         write.csv(df2, file, row.names = FALSE)
       }

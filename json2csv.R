@@ -64,7 +64,7 @@ elements <- full_join(temp1, temp2, by = c("AtomicNumber", "Symbol"))  %>%
                          Liquid = "Liquid",
                          Gas = "Gas",
                          "<NA>" = c("Expected to be a Gas","Expected to be a Solid"))) %>% replace_with_na_all(~.x == "<NA>") %>% 
-replace_with_na_all(~.x == "")
+replace_with_na_all(~.x == "") 
 
 write_csv(elements, "elements.csv", col_names = TRUE)
 
