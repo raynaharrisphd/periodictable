@@ -230,55 +230,9 @@ server <- function(input, output) {
       print(df2)
     })
     
-###### unused stats #####  
-    
-    output$summary <- renderTable({
-      
-      df2 <- df %>%
-        select(input$quals, input$quants) 
-      newcolname <- colnames(df2) 
-    
-      df3 <- df %>%
-        mutate(Type = factor(Type, levels = types)) %>%
-        filter(Type %in% input$types) %>%
-        mutate(AtomicNumber = as.factor(AtomicNumber),
-               Group = as.factor(Group),
-               Period = as.factor(Period),
-               Type = as.factor(Type)) %>%
-        rename("Groups" = input$quals,
-               "Measure" = input$quants)  %>%
-        select(Groups, Measure)  %>%
-        #drop_na() %>%
-        group_by(Groups) %>%
-        summarise(Mean = mean(Measure, na.rm = T)) 
-      
-      colnames(df3) <- newcolname
-      print(df3)
-    })
     
     
-    output$stats <- renderTable({
-      
-      df2 <- df %>%
-        filter(Type %in% input$types) %>%
-        rename("Groups" = input$quals,
-               "Measure" = input$quants)  %>%
-        select(Groups, Measure) 
-      
-      tukey_result <- data.frame(TukeyHSD(aov(Measure ~ Groups, data = df2))[[1]]) %>%
-        mutate(comparison = row.names(.),
-               " " = word(comparison, 1, sep = "-"),
-               "  " = word(comparison, 2, sep = "-"),
-              "   " = stars.pval(p.adj)) %>%
-        select(" ", "  ", diff, p.adj, "   ") %>%
-        arrange(p.adj) %>%
-        rename("Difference" = diff,
-               "p-value" = p.adj) 
-      print(head(tukey_result, 5))
-  
-      
-    })
-    
+ 
     
 ##### print statements ####    
     
