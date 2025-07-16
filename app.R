@@ -166,8 +166,7 @@ server <- function(input, output) {
         filter(Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
-        select(AtomicNumber, Symbol, Variable, Measure)  %>%
-        drop_na() 
+        select(AtomicNumber, Symbol, Variable, Measure) 
       
       mytitle = paste0("Barplot of ", input$quants, " by Atomic Number", sep = "" )  
 
