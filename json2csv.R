@@ -3,6 +3,7 @@
 library(tidyjson)
 library(dplyr)
 library(naniar)
+library(forcats)
 
 ### Import lots of data
 
@@ -32,20 +33,40 @@ temp1 <- df1 %>%
 
 temp2 <- df2  %>%
   select(AtomicNumber, Symbol, Group, Period, Block,
-         AtomicMass, Density:DiscoveredBy)
+         AtomicMass, Density, HeatCapacity:DiscoveredBy)
 
 temp3 <- df3 %>% 
   select(AtomicNumber, Symbol, StandardState, GroupBlock)
 colnames(temp3)[4] <- "Type"
+colnames(temp3)[3] <- "Phase"
+
+temp4 <- df4 %>%
+  select(AtomicNumber, Symbol, NumberofNeutrons, NumberofProtons, NumberofElectrons, Natural) 
 
 
+tail(temp4)
 
-test <- full_join(temp1, temp2, by = c("AtomicNumber", "Symbol"))  %>%
+
+elements <- full_join(temp1, temp2, by = c("AtomicNumber", "Symbol"))  %>%
   full_join(., temp3, by = c("AtomicNumber", "Symbol"))  %>%
-  select(AtomicNumber, Symbol, Element, Group, Period, Block, Type, 
-         StandardState, Radioactive,
+  left_join(., temp4, by = c("AtomicNumber", "Symbol"))  %>%
+  select(AtomicNumber, Symbol, Element, Type, 
+         Natural, Phase, Radioactive, Group, Period, 
+         
+         Block, 
+         Appearance,
          everything())   %>%
-  mutate(across(c("Discovery"),~ifelse(.x<1600,NA,.x))) 
-  
-head(test)
+  mutate(across(c("Discovery"),~ifelse(.x<1600,NA,.x))) %>%
+  mutate(across(where(~ all(.x %in% 0:1)), factor, labels = c("No", "Yes"))) %>%
+  mutate(Phase = as.factor(Phase))  %>%
+  mutate(Phase = fct_collapse(Phase,
+                         Solid = "Solid",
+                         Liquid = "Liquid",
+                         Gas = "Gas",
+                         "<NA>" = c("Expected to be a Gas","Expected to be a Solid"))) %>% replace_with_na_all(~.x == "<NA>") %>% 
+replace_with_na_all(~.x == "")
+
+write_csv(elements, "elements.csv", col_names = TRUE)
+
+
 
