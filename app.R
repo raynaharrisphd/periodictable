@@ -26,29 +26,32 @@ types <- c("Alkali metal", "Alkaline earth metal", "Lanthanide" ,
              "Actinide" ,  "Transition metal" ,
               "Post-transition metal",  "Metalloid", "Nonmetal" , 
              "Halogen"  , "Noble gas" )
-
 displayfirst <- c("Alkali metal", "Alkaline earth metal", "Post-transition metal",  
                  "Metalloid", "Nonmetal", 
                  "Halogen"  , "Noble gas" )
-
-phases <- c( "Solid", "Liquid" , "Gas", "Unknown" )
-natural <- c( "Solid", "Liquid" , "Gas")
+phases <- c( "Solid", "Liquid" , "Gas")
 blocks <- c("s", "p", "d", "f")
-
-quals <- c("Block",  "Phase", "Natural","Radioactive" , "Type" )
-
+quals <- c("Block",  "Phase", "Natural","Radioactive" , "Type", "NumberofValence" )
 quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity", "Electronegativity", "IonizationEnergy", 
             "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons", 
             "ThermalConductivity","VanDerWaalsRadius")
 
-colsofinterest <- c(quals, quants)
+# color palets
 
-####### Data wrangle #######
+typecolors <- c("Alkali metal", "Alkaline earth metal", "Lanthanide" ,
+                "Actinide" ,  "Transition metal" ,
+                "Post-transition metal",  "Metalloid", "Nonmetal" , 
+                "Halogen"  , "Noble gas" )
+
+
+
+####### Data import #######
 
 df <- read_csv("elements.csv") %>%
   mutate(Block = as.factor(Block),
          Type = as.factor(Type),
-         Element = as.factor(Element)) %>%
+         Element = as.factor(Element),
+         NumberofValence = as.factor(NumberofValence)) %>%
   mutate(Type = factor(Type, levels = types),
          Block = factor(Block, levels = blocks)) %>%
   
@@ -56,8 +59,6 @@ df <- read_csv("elements.csv") %>%
   mutate(Phase = as.factor(Phase))
 
 elements <- levels(df$Element)
-
-
 
 mybreaks <- df %>%
   filter(Group == 18) %>%
@@ -74,8 +75,7 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            #radioButtons("colsofinterest", label = "Visualize Qualitative Properties", choices = colsofinterest),
-            h4("Customize the Periodic Table"),
+            h4("Customize the Graphs and Tables"),
             radioButtons("quals", label = "Color: Qualitative Properties", 
                          choices = quals, selected = "Type"),
             br(),
@@ -83,7 +83,7 @@ ui <- fluidPage(
                          choices = quants, selected = "Electronegativity"),
                         br(),
             checkboxGroupInput("phases", label = "Select: Phase", 
-                               choices = phases, selected = natural),
+                               choices = phases, selected = phases),
             br(),
             checkboxGroupInput("types", label = "Select: Element Type", 
                                choices = types, selected = displayfirst),
@@ -91,7 +91,10 @@ ui <- fluidPage(
             downloadButton("downloadTable", "Download the table displayed"),
             br(),
             br(),
-            downloadButton("downloadDataSet", "Download the full dataset")
+            downloadButton("downloadDataSet", "Download the full dataset") ,
+            br(),
+            br(),
+            htmlOutput('html')
         ),
 
         mainPanel(
@@ -115,9 +118,7 @@ ui <- fluidPage(
            br(),
            h5("Dataset 1: Periodic Table Data Preview"),
            p("This table provides a preview (first 5 elelements) of a dataset containg 20 descriptive, qualitative, and quantitaitve variables for 117 elements. Scoll down to view all the variables. (Note, data rotated 90 degrees for easy viewing.) Click the download button above to save and open the full dataset. "),
-           tableOutput('myTable'),
-           br(),
-           p("Data from <https://github.com/Bowserinator/Periodic-Table-JSON/blob/master/PeriodicTableCSV.csv>, <https://github.com/Bluegrams/periodic-table-data/blob/master/Periodica.Data/Data/ElementData.csv>, and <https://pubchem.ncbi.nlm.nih.gov/periodic-table/>, <https://gist.github.com/GoodmanSciences/c2dd862cd38f21b0ad36b8f96b4bf1ee#file-periodic-table-of-elements-csv>.")
+           tableOutput('myTable')
            
         )
     )
@@ -140,20 +141,21 @@ server <- function(input, output) {
         rename("Variable" = input$quals,
                "Measure" = input$quants) %>%
         mutate(NumSymbol = paste0(AtomicNumber, Symbol, sep = '\n')) %>%
-        select(Group, Period, Symbol, Variable, Measure) %>%
+        select(Group, Period, Symbol, Variable, Measure, xpos, ypos) %>%
         drop_na()
         
-    
-      p <- ggplot(df2, aes(x = Group, y = Period, 
+      p <- ggplot(df2, aes(x = xpos, y = ypos, 
                            label = Symbol, 
                            color = Variable)) +
         geom_point(aes(size = Measure)) +
         geom_text(check_overlap = TRUE, nudge_y = 0.5,
                   size = 4) +
-        scale_y_reverse(breaks= c(1,2,3,4,5,6,7,8)) +
+        scale_y_reverse(breaks= c(1,2,3,4,5,6,7)) +
         scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9,11,10,12,13,14,15,16,17,18)) +
         theme_classic() +
-        labs(color = input$quals, size = input$quants,
+        labs(color = input$quals, 
+             size = input$quants,
+             x = "Group", y = "Period",
              title = "Periodic Table of Elements",
              subtitle = paste0("Color: ", input$quals, ", Size: ", input$quants, " (Not to Scale)",sep = "")) 
       print(p)
@@ -230,12 +232,11 @@ server <- function(input, output) {
                Period = as.factor(Period)) %>%
         select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
         arrange(desc(.[[7]])) 
+      
       print(df2)
     })
     
-    
-    
- 
+  
     
 ##### print statements ####    
     
@@ -249,6 +250,7 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Element)
+      
       print(paste0(df3, " has the higest ",  input$quants, " of the elelments displayed above.", sep = ""))
     })
     
@@ -263,6 +265,7 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Element)
+      
       print(paste0(df3, " has the lowest ",  input$quants,  " of the elelments displayed above.", sep = ""))
     })
     
@@ -281,7 +284,8 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Variable)
-      print(paste0(df3, "s have the highest group average ", input$quants, " of the elements displayed above.", sep = ""))
+      
+      print(paste0(df3, " has the highest group average ", input$quants, " of the elements displayed above.", sep = ""))
     })
     
     output$printme4 <- renderText({
@@ -298,7 +302,8 @@ server <- function(input, output) {
       
       df3 <- head(df2, 1) %>%
         pull(Variable)
-      print(paste0(df3, "s have the lowest group average ", input$quants, " of the elements displayed above.", sep = ""))
+      
+      print(paste0(df3, " has the lowest group average ", input$quants, " of the elements displayed above.", sep = ""))
     })
     
 
@@ -308,10 +313,12 @@ server <- function(input, output) {
     output$myTable <- renderTable({
       
       df2 <- df %>%
-        select("AtomicNumber","Element", "Symbol", "AtomicMass" , 
+        select("AtomicNumber", "Symbol", "Element", "AtomicMass" , 
                "NumberofProtons", "NumberofNeutrons" , NumberofElectrons,
-               "ElectronConfig", "ElectronConfig2", "Period" , "Group" , 
-               "Phase" ,"Radioactive", "Type" , 
+               "ElectronConfig", "NobleGasConfig", 
+               NumberofValence, NumberofShells,
+               "Period" , "Group" , "Block",
+               "Type" , "Phase" ,"Radioactive",  
                everything(), -Appearance) %>%
         mutate(AtomicNumber = as.factor(AtomicNumber)) %>%
         head(., 5)
@@ -329,6 +336,7 @@ server <- function(input, output) {
     
     # Handle the download
     output$downloadDataSet <- downloadHandler(
+      
       filename = function() {
         "periodictabledata.csv"
       },
@@ -366,6 +374,18 @@ server <- function(input, output) {
         write.csv(df2, file, row.names = FALSE)
       }
     )
+    
+    # html output 
+    
+    output$html <- renderText({
+      
+      printme <- 'Source data from <a href="https://github.com/Bowserinator/Periodic-Table-JSON/blob/master/PeriodicTableCSV.csv">Bowserinator GitHub</a>, <a href="https://github.com/Bluegrams/periodic-table-data/blob/master/Periodica.Data/Data/ElementData.csv">Bluegrams GitHub</a>, 
+      <a href="https://pubchem.ncbi.nlm.nih.gov/periodic-table/">PubChem</a>, and <a href="https://gist.github.com/GoodmanSciences/c2dd862cd38f21b0ad36b8f96b4bf1ee#file-periodic-table-of-elements-csv">GoodmanSciences GitHub</a>.'
+        
+       print(printme)
+    })
+    
+    
     
     
 ###### closing ####    

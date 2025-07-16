@@ -23,16 +23,21 @@ newnamesdf1 <- c("Element", "Appearance", "AtomicMass", "BoilingPoint", "Categor
               "SKIPME", "SKIPME2", "SKIPME3", "Summary", "Symbol", 
               "xpos", "ypos", "wxpos", "wypos", "Shells", 
               "ElectronConfig", "ElectronConfig2", "ElectronAffinity",
-              "Electonegativity", "IonizationEnergy", "SKIPME4", "SKIPME5",  "SKIPME6","SKIPME7", "SKIPME8")
+              "Electonegativity", "IonizationEnergy", "SKIPME4", "SKIPME5",  
+              "SKIPME6","SKIPME7", "SKIPME8")
 colnames(df1) <- newnamesdf1
 
 temp1 <- df1 %>%  
-  select(AtomicNumber, Symbol, Element, Appearance, ElectronConfig) %>%
+  select(AtomicNumber, Symbol, Element, Appearance, ElectronConfig,
+         "xpos", "ypos") %>%
+  mutate(ypos = ifelse(Symbol == "La", 6, 
+                       ifelse(Symbol == "Ac", 7, ypos))) %>%
   filter(Element != "Ununennium")
 
 temp2 <- df2  %>%
   select(AtomicNumber, Symbol, Group, Period, Block,
-         AtomicMass, Density, HeatCapacity:Discovery, DiscoveredBy, Configuration)
+         AtomicMass, Density, HeatCapacity:Discovery, 
+         DiscoveredBy, Configuration)
 colnames(temp2)[23] <- "NobleGasConfig"
 head(temp2)
 
@@ -42,25 +47,35 @@ colnames(temp3)[4] <- "Type"
 colnames(temp3)[3] <- "Phase"
 
 temp4 <- df4 %>%
-  select(AtomicNumber, Symbol, NumberofNeutrons, NumberofProtons, NumberofElectrons, Natural, NumberofShells, NumberofValence, Radioactive) 
+  select(AtomicNumber, Symbol, NumberofNeutrons, NumberofProtons, 
+         NumberofElectrons, Natural, NumberofShells, NumberofValence, 
+         Radioactive) 
 
 elements <- full_join(temp1, temp2, by = c("AtomicNumber", "Symbol"))  %>%
   full_join(., temp3, by = c("AtomicNumber", "Symbol"))  %>%
   left_join(., temp4, by = c("AtomicNumber", "Symbol"))  %>%
   select(AtomicNumber, Symbol, Element, Type, 
          Natural, Phase, Radioactive, Group, Period, 
-         Block, Appearance, ElectronConfig, NobleGasConfig,
-         everything())   %>%
-  mutate(across(c("Discovery"),~ifelse(.x<1600,NA,.x))) %>%
-  mutate(Phase = as.factor(Phase),
+         Block, ElectronConfig, NobleGasConfig,
+         NumberofValence, NumberofShells,
+         everything(), -AbundanceCrust, -AbundanceUniverse)   %>%
+  mutate(across(c("Discovery"),~ifelse(.x<1600,NA,.x)),
+         Phase = as.factor(Phase),
          Radioactive = replace_na("no"),
-         Natural = replace_na("no"))  %>%
-  mutate(Phase = fct_collapse(Phase,
-                         Solid = "Solid",
-                         Liquid = "Liquid",
-                         Gas = "Gas",
-                         "Unknown" = c("Expected to be a Gas","Expected to be a Solid"))) %>% 
-  replace_with_na_all(~.x == "")  
-head(elements)
+         Natural = replace_na("no"),
+         Phase = fct_collapse(Phase,
+                         Solid = c("Solid",
+                                   "Expected to be a Solid"),
+                         Liquid = c("Liquid"),
+                         Gas = c("Gas",
+                                 "Expected to be a Gas"))) %>% 
+  replace_with_na_all(~.x == "")  %>%
+  mutate(Natural = str_to_title(Natural),
+         Radioactive = str_to_title(Radioactive),
+         Appearance = str_to_title(Appearance)) %>%
+  mutate(Period = ifelse(AtomicNumber >57 & AtomicNumber < 72, 6,
+                    ifelse(AtomicNumber >89 & AtomicNumber < 104, 7, Period)),
+         Group = ifelse(AtomicNumber >57 & AtomicNumber < 72, 3,
+                         ifelse(AtomicNumber >89 & AtomicNumber < 104, 3, Group)))
 
 write_csv(elements, "elements.csv", col_names = TRUE)
