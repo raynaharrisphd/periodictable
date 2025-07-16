@@ -8,11 +8,11 @@
 #
 
 # available at <https://raynaharrisphd-periodictable.share.connect.posit.cloud/>
+
 # data from three sources. see json2csv.R
 
 library(shiny)
 library(tidyverse)
-
 
 # create file with dependencies for hosting
 # rerun if adding new packages
