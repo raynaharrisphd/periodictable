@@ -11,11 +11,7 @@
 
 library(shiny)
 library(tidyverse)
-library(readxl)
-library(bslib)
-library(ggpubr)
-library(rstatix)
-library(forcats)
+
 
 # create file with dependencies for hosting
 # rerun if adding new packages
@@ -313,7 +309,7 @@ server <- function(input, output) {
         mutate(AtomicNumber = as.factor(AtomicNumber)) %>%
         head(., 5)
       
-      df3 <- as.tibble(t(df2)) 
+      df3 <- as_tibble(t(df2)) 
       colnames(df3) <- df3[3,]
       df3 <- as.data.frame(df3)
       rownames(df3) <- colnames(df2)
