@@ -55,7 +55,7 @@ types <- c("Alkali metal", "Alkaline earth metal", "Lanthanide" ,
              "Actinide" ,  "Transition metal" ,
               "Post-transition metal",  "Metalloid", "Nonmetal" , 
              "Halogen"  , "Noble gas" )
-displayfirst <- c("Alkali metal", "Alkaline earth metal", 
+displayfirst <- c("Alkali metal", "Alkaline earth metal", "Lanthanide", 
                   "Post-transition metal",  "Metalloid", "Nonmetal", 
                  "Halogen"  , "Noble gas" )
 phases <- c( "Solid", "Liquid" , "Gas")
@@ -67,7 +67,7 @@ quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity",
             "ThermalConductivity")
 
 newquants <- c("AtomicRadius", "Electronegativity", 
-               "IonizationEnergy", "ElectronAffinity")
+               "IonizationEnergy", "NumberofProtons")
 
 # not used
 # "VanDerWaalsRadius", "NumberofIsotopes"
@@ -107,7 +107,7 @@ ui <- fluidPage(
         sidebarPanel(
             h4("Customize the Graphs and Tables"),
             radioButtons("quants", label = "Scale: Quantitative Prorties", 
-                         choices = quants, selected = "Electronegativity"),
+                         choices = quants, selected = "AtomicMass"),
             br(),
             radioButtons("quals", label = "Color: Qualitative Properties", 
                          choices = quals, selected = "Type"),
@@ -143,9 +143,9 @@ ui <- fluidPage(
            br(),
            plotOutput("scatterplot"),
            textOutput("corAtomicRadius"),
-           textOutput("corElectronAffinity"),
            textOutput("corElectronegativity"),
            textOutput("corIonizationEnergy"),
+           textOutput("corNumberofProtons"),
            br(),
            #plotOutput("boxplot"),
            #br(),
@@ -180,18 +180,18 @@ server <- function(input, output) {
                ) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants) %>%
-        mutate(NumSymbol = paste0(AtomicNumber, Symbol, sep = '\n')) %>%
-        select(Group, Period, Symbol, Variable, Measure, xpos, ypos) %>%
+        mutate(NumSymbol = paste(AtomicNumber, Symbol, sep = "\n")) %>%
+        select(Group, Period, Symbol, Variable, Measure, xpos, ypos, NumSymbol) %>% 
         drop_na()
         
       p <- ggplot(df2, aes(x = xpos, y = ypos, 
-                           label = Symbol, 
+                           label = NumSymbol, 
                            color = Variable)) +
         geom_point(aes(size = Measure), shape = 15) +
         geom_text(check_overlap = TRUE, nudge_y = 0.5,
-                  size = 4) +
+                  size = 3.5) +
         scale_y_reverse(breaks= c(1,2,3,4,5,6,7),
-                        limits = c(9,1)) +
+                        limits = c(9,0.5)) +
         scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9,11,10,12,13,14,15,16,17,18),
                            limits = c(1,18)) +
         theme_classic() +
@@ -224,7 +224,7 @@ server <- function(input, output) {
       p <- ggplot(df2, aes(x = AtomicNumber , y = Measure, 
                            fill = Variable, label = Symbol)) +
         geom_bar(stat = "identity") +
-        geom_text(check_overlap = TRUE) +
+        geom_text(check_overlap = TRUE, size = 3.5) +
         theme_classic() +
         labs(fill = input$quals,
              x = "Atomic Number",
@@ -293,22 +293,23 @@ server <- function(input, output) {
         left_join(., temp)
       head(dflong)  
       
-      p <- ggplot(dflong, aes(x = Value, y = Measure)) +
+      p <- ggplot(dflong, aes(x = Value, y = Measure, label = Symbol)) +
         #geom_smooth(method = "lm", color = "darkgrey", se = F) +
         geom_point(aes(color = Variable)) +
         facet_wrap(~Measures, scales = "free_x", switch = "x") +
         theme_classic( ) + 
-        labs(y = input$quants, subtitle = mysubtitle, title = mytitle)
+        labs(y = input$quants, subtitle = mysubtitle, title = mytitle) +
+        geom_text(check_overlap = TRUE, size = 3.5) 
       return(p)  
       
       
     })
     
     
-##### correlation stats
+##### correlation stats #####
     
     output$corAtomicRadius <- renderText({ myfunction(input$quants, "AtomicRadius")})
-    output$corElectronAffinity <- renderText({ myfunction(input$quants, "ElectronAffinity")})
+    output$corNumberofProtons <- renderText({ myfunction(input$quants, "NumberofProtons")})
     output$corElectronegativity <- renderText({ myfunction(input$quants, "Electronegativity")})
     output$corIonizationEnergy <- renderText({ myfunction(input$quants, "IonizationEnergy")})
 
@@ -527,3 +528,9 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+
+
+###### the end #####
+
+
