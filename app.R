@@ -54,8 +54,8 @@ types <- c("Alkali metal", "Alkaline earth metal", "Lanthanide" ,
              "Actinide" ,  "Transition metal" ,
               "Post-transition metal",  "Metalloid", "Nonmetal" , 
              "Halogen"  , "Noble gas" )
-displayfirst <- c("Alkali metal", "Alkaline earth metal", "Post-transition metal",  
-                 "Metalloid", "Nonmetal", 
+displayfirst <- c("Alkali metal", "Alkaline earth metal", 
+                  "Post-transition metal",  "Metalloid", "Nonmetal", 
                  "Halogen"  , "Noble gas" )
 phases <- c( "Solid", "Liquid" , "Gas")
 blocks <- c("s", "p", "d", "f")
@@ -72,6 +72,7 @@ newquants <- c("AtomicRadius", "Electronegativity",
 # "VanDerWaalsRadius", "NumberofIsotopes"
 yesnolevels <- c("Yes", "No")
 
+
 ####### Data import #######
 
 df <- read_csv("elements.csv") %>%
@@ -85,7 +86,7 @@ df <- read_csv("elements.csv") %>%
          Radioactive = factor(Radioactive, levels = yesnolevels)) %>%
   mutate(Phase = as.factor(Phase))
 
-elements <- levels(df$Element)
+elements <- df %>% pull(Element)
 
 mybreaks <- df %>%
   filter(Group == 18) %>%
@@ -104,16 +105,16 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             h4("Customize the Graphs and Tables"),
+            radioButtons("quants", label = "Scale: Quantitative Prorties", 
+                         choices = quants, selected = "AtomicRadius"),
+            br(),
             radioButtons("quals", label = "Color: Qualitative Properties", 
                          choices = quals, selected = "Type"),
             br(),
-            radioButtons("quants", label = "Scale: Quantitative Prorties", 
-                         choices = quants, selected = "AtomicRadius"),
-                        br(),
             checkboxGroupInput("phases", label = "Select: Phase", 
                                choices = phases, selected = phases),
             br(),
-            checkboxGroupInput("types", label = "Select: Element Type", 
+            checkboxGroupInput("types", label = "Select: Type", 
                                choices = types, selected = displayfirst),
             br(),
             downloadButton("downloadTable", "Download the table displayed"),
@@ -122,7 +123,12 @@ ui <- fluidPage(
             downloadButton("downloadDataSet", "Download the full dataset") ,
             br(),
             br(),
-            htmlOutput('html')
+            htmlOutput('html'),
+            br(),
+            checkboxGroupInput("elements", label = "Select Elements to Display in a Table Preview", 
+                               choices = elements, selected = c("Hydrogen","Oxygen", "Radon", 
+                                                                "Sodium", "Gold",  "Chlorine")),
+            br()
         ),
 
         mainPanel(
@@ -140,17 +146,17 @@ ui <- fluidPage(
            textOutput("corElectronegativity"),
            textOutput("corIonizationEnergy"),
            br(),
-           plotOutput("boxplot"),
-           br(),
-           textOutput('printme3'),
-           textOutput('printme4'),
+           #plotOutput("boxplot"),
+           #br(),
+           #textOutput('printme3'),
+           #textOutput('printme4'),
            br(),
            h5("Table 1: Element Data"),
-           p("This partial dataset contains information only for the elements with the selected characteristics, arranges from smallest to largest for the selected quantitative variable. This is a preview of the first five rows. Click the download button above to save the partial dataset."),
+           p("This partial dataset contains information only for the elements with the selected characteristics, arranges from smallest to largest for the selected quantitative variable. This is a preview based on the elements with checked boxes. Click the download button above to save the partial dataset for all the elements in the graphs."),
            tableOutput('table'),
            br(),
            h5("Table 2: Periodic Table Data"),
-           p("This complete dataset contains 20 descriptive, qualitative, and quantitaitve variables for 117 elements. Scoll down to view all the variables. Click the download button above to save and open the full dataset. (Note: Data rotated for easy viewing.)"),
+           p("This complete dataset contains 20 descriptive, qualitative, and quantitaitve variables for 117 elements. Scoll down to view all the variables. This is a preview based on the elements with checked boxes.Click the download button above to save and open the full dataset. (Note: Data rotated for easy viewing.)"),
            tableOutput('myTable')
            
         )
@@ -385,6 +391,8 @@ server <- function(input, output) {
     # Generate a sample table
     output$table <- renderTable({
       
+      myelements <- input$elements
+      
       df2 <- df %>%
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
@@ -392,8 +400,8 @@ server <- function(input, output) {
                Group = as.factor(Group),
                Period = as.factor(Period)) %>%
         select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
-        arrange(desc(.[[7]])) %>%
-        head(. ,5)
+        #arrange(desc(.[[7]])) %>%
+        filter(Element %in% myelements)
       
       return(df2)
     })
@@ -402,6 +410,8 @@ server <- function(input, output) {
     
     # Generate a sample table
     output$myTable <- renderTable({
+      
+      myelements <- input$elements
       
       df2 <- df %>%
         select("AtomicNumber", "Symbol", "Element", "AtomicMass" , 
@@ -412,7 +422,7 @@ server <- function(input, output) {
                "Type" , "Phase" ,"Radioactive",  
                everything(), -Appearance) %>%
         mutate(AtomicNumber = as.factor(AtomicNumber)) %>%
-        head(., 5)
+        filter(Element %in% myelements)
       
       df3 <- as_tibble(t(df2)) 
       colnames(df3) <- df3[3,]
@@ -424,6 +434,36 @@ server <- function(input, output) {
       return(df3)
 
     })
+    
+    
+    
+    output$selectTable <- renderTable({
+      
+      df2 <- df %>%
+        select("AtomicNumber", "Symbol", "Element", "AtomicMass" , 
+               "NumberofProtons", "NumberofNeutrons" , NumberofElectrons,
+               "ElectronConfig", "NobleGasConfig", 
+               NumberofValence, NumberofShells,
+               "Period" , "Group" , "Block",
+               "Type" , "Phase" ,"Radioactive",  
+               everything(), -Appearance, -DiscoveredBy, -xpos, -ypos) %>%
+        mutate(AtomicNumber = as.factor(AtomicNumber)) %>%
+        filter( Element %in% input$elements)
+      
+      df3 <- as_tibble(t(df2)) 
+      colnames(df3) <- df3[3,]
+      df3 <- as.data.frame(df3)
+      rownames(df3) <- colnames(df2)
+      df3 <- df3 %>%
+        mutate(" " = rownames(.)) %>%
+        select(" ", everything())
+      return(df2)
+    })
+    
+    
+    
+    
+    
     
     # Handle the download
     output$downloadDataSet <- downloadHandler(
