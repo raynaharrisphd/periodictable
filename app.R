@@ -13,11 +13,39 @@
 
 library(shiny)
 library(tidyverse)
+library(stats)
 
 # create file with dependencies for hosting
 # rerun if adding new packages
 #library(rsconnect)
 #rsconnect::writeManifest()
+
+
+###### Functions. #####
+
+myfunction <- function(x,y) {
+  
+  m1 <- df %>%
+    select(all_of(x))
+  colnames(m1) = "Measure1"
+  
+  m2 <- df %>%
+    select(all_of(y))  
+  colnames(m2) = "Measure2"
+  
+  df4 <- cbind(m1, m2)
+  
+  res <- cor.test(df4$Measure1, df4$Measure2)
+  print(res)
+  
+  isisgnif <-ifelse(res$p.value == 0, ". Self-comparison ", 
+                    ifelse(res$p.value < 0.05 && res$estimate < -0.69 | res$estimate > 0.69, ". Correlated ", ". Not correlated"))
+    
+  
+  p <- paste0(x, " ~ ", y, ":   R^2 = ", round(res$estimate,3), ", p-value = ", signif(res$p.value, 3), isisgnif, sep = "" )
+  print(p)
+}
+
 
 ####### Lists #######
 
@@ -32,9 +60,16 @@ displayfirst <- c("Alkali metal", "Alkaline earth metal", "Post-transition metal
 phases <- c( "Solid", "Liquid" , "Gas")
 blocks <- c("s", "p", "d", "f")
 quals <- c("Block",  "Phase", "Natural","Radioactive" , "Type", "NumberofValence" )
-quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity", "Electronegativity", "IonizationEnergy", 
-            "NumberOfIsotopes" ,"NumberofNeutrons", "NumberofProtons", 
-            "ThermalConductivity","VanDerWaalsRadius")
+quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity", 
+            "Electronegativity", "IonizationEnergy", 
+            "NumberofNeutrons", "NumberofProtons", 
+            "ThermalConductivity")
+
+newquants <- c("AtomicRadius", "Electronegativity", 
+               "IonizationEnergy", "ElectronAffinity")
+
+# not used
+# "VanDerWaalsRadius", "NumberofIsotopes"
 yesnolevels <- c("Yes", "No")
 
 ####### Data import #######
@@ -48,8 +83,6 @@ df <- read_csv("elements.csv") %>%
          Block = factor(Block, levels = blocks),
          Natural = factor(Natural, levels = yesnolevels),
          Radioactive = factor(Radioactive, levels = yesnolevels)) %>%
-  
-  replace_na(list(Phase = "Unknown")) %>%
   mutate(Phase = as.factor(Phase))
 
 elements <- levels(df$Element)
@@ -57,6 +90,7 @@ elements <- levels(df$Element)
 mybreaks <- df %>%
   filter(Group == 18) %>%
   pull(AtomicNumber)
+
 
 ####### Shiny  UI #######
 
@@ -74,7 +108,7 @@ ui <- fluidPage(
                          choices = quals, selected = "Type"),
             br(),
             radioButtons("quants", label = "Scale: Quantitative Prorties", 
-                         choices = quants, selected = "AtomicMass"),
+                         choices = quants, selected = "AtomicRadius"),
                         br(),
             checkboxGroupInput("phases", label = "Select: Phase", 
                                choices = phases, selected = phases),
@@ -97,9 +131,14 @@ ui <- fluidPage(
            br(),
            plotOutput("barplot"),
            br(),
-           br(),
            textOutput('printme'),
            textOutput('printme2'),
+           br(),
+           plotOutput("scatterplot"),
+           textOutput("corAtomicRadius"),
+           textOutput("corElectronAffinity"),
+           textOutput("corElectronegativity"),
+           textOutput("corIonizationEnergy"),
            br(),
            plotOutput("boxplot"),
            br(),
@@ -107,11 +146,11 @@ ui <- fluidPage(
            textOutput('printme4'),
            br(),
            h5("Table 1: Element Data"),
-           p("This table contains all the data for the elements in the graphs above, arranges from smallest to largest for the selected quantitative variable."),
+           p("This partial dataset contains information only for the elements with the selected characteristics, arranges from smallest to largest for the selected quantitative variable. This is a preview of the first five rows. Click the download button above to save the partial dataset."),
            tableOutput('table'),
            br(),
-           h5("Dataset 1: Periodic Table Data Preview"),
-           p("This table provides a preview (first 5 elelements) of a dataset containg 20 descriptive, qualitative, and quantitaitve variables for 117 elements. Scoll down to view all the variables. (Note, data rotated 90 degrees for easy viewing.) Click the download button above to save and open the full dataset. "),
+           h5("Table 2: Periodic Table Data"),
+           p("This complete dataset contains 20 descriptive, qualitative, and quantitaitve variables for 117 elements. Scoll down to view all the variables. Click the download button above to save and open the full dataset. (Note: Data rotated for easy viewing.)"),
            tableOutput('myTable')
            
         )
@@ -154,7 +193,7 @@ server <- function(input, output) {
              x = "Group", y = "Period",
              title = "Periodic Table of Elements",
              subtitle = paste0("Color: ", input$quals, ", Size: ", input$quants, " (Not to Scale)",sep = "")) 
-      print(p)
+      return(p)
     })
     
   
@@ -170,7 +209,10 @@ server <- function(input, output) {
                "Measure" = input$quants)  %>%
         select(AtomicNumber, Symbol, Variable, Measure) 
       
-      mytitle = paste0("Barplot of ", input$quants, " by Atomic Number", sep = "" )  
+      mytitle = paste0("Barplot of ", input$quants,  sep = "" )  
+      mysubtitle = paste0("Which elements have the highest and lowest ", 
+                          input$quants, "?", sep = "" )  
+      
 
       p <- ggplot(df2, aes(x = AtomicNumber , y = Measure, 
                            fill = Variable, label = Symbol)) +
@@ -180,9 +222,9 @@ server <- function(input, output) {
         labs(fill = input$quals,
              x = "Atomic Number",
              y = input$quants,
-             title = mytitle) +
+             title = mytitle, subtitle = mysubtitle) +
         scale_x_continuous(breaks = mybreaks)
-      print(p)
+      return(p)
       
       
     })
@@ -202,36 +244,68 @@ server <- function(input, output) {
         drop_na()
         
       mytitle = paste0("Boxplot of ", input$quants, 
-                       " by ", input$quals,  sep = "" )  
+                       " by ", input$quals,  sep = "" ) 
+      mysubtitle = paste0("Does ", input$quants, 
+                       " differ between ", input$quals, "s?", sep = "" ) 
       
       p <- ggplot(df2, aes(x = Variable, y = Measure, 
                            color = Variable)) +
         geom_boxplot(outliers = FALSE) +
         geom_jitter() +
-        theme_classic() +
+        #theme_classic( ) +
         labs(x = input$quals,
              y = input$quants,
              title = mytitle,
+             subtitle = mysubtitle,
              color = NULL)  
         
-      print(p)
+      return(p)
     })
     
-    output$table <- renderTable({
+##### scatter plots
+    
+    output$scatterplot <- renderPlot({
       
-      df2 <- df %>%
+      temp <- df %>%
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
-        mutate(AtomicNumber = as.factor(AtomicNumber),
-               Group = as.factor(Group),
-               Period = as.factor(Period)) %>%
-        select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
-        arrange(desc(.[[7]])) 
+        select(AtomicNumber:Element, input$quants) %>% 
+        rename("Measure" = input$quants)
       
-      print(df2)
+      mysubtitle = paste0("Is ", input$quants, " correlated with other quantitative traits?", 
+                          sep = "")
+      mytitle = paste0("Scatter Plots of ", input$quants,  " and Other Quantitative Traits",sep = "")
+      
+      dflong <- df %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
+        rename("Variable" = input$quals)  %>%
+        select(AtomicNumber:Element, Variable, all_of(newquants),  input$quants) %>%
+        pivot_longer(cols = c(newquants), 
+                     names_to = "Measures", values_to = "Value") %>%
+        left_join(., temp)
+      head(dflong)  
+      
+      p <- ggplot(dflong, aes(x = Value, y = Measure)) +
+        geom_smooth(method = "lm", color = "darkgrey", se = F) +
+        geom_point(aes(color = Variable)) +
+        facet_wrap(~Measures, scales = "free_x", switch = "x") +
+        theme_classic( ) + 
+        labs(y = input$quants, subtitle = mysubtitle, title = mytitle)
+      return(p)  
+      
+      
     })
     
-  
+    
+##### correlation stats
+    
+    output$corAtomicRadius <- renderText({ myfunction(input$quants, "AtomicRadius")})
+    output$corElectronAffinity <- renderText({ myfunction(input$quants, "ElectronAffinity")})
+    output$corElectronegativity <- renderText({ myfunction(input$quants, "Electronegativity")})
+    output$corIonizationEnergy <- renderText({ myfunction(input$quants, "IonizationEnergy")})
+
+    
     
 ##### print statements ####    
     
@@ -246,7 +320,10 @@ server <- function(input, output) {
       df3 <- head(df2, 1) %>%
         pull(Element)
       
-      print(paste0(df3, " has the higest ",  input$quants, " of the elelments displayed above.", sep = ""))
+      df4 <- head(df2, 1) %>%
+        pull(input$quants)
+      
+      return(paste0(df3, " has the higest ",  input$quants, " of the elelments displayed above at ", df4, sep = ""))
     })
     
     
@@ -261,7 +338,7 @@ server <- function(input, output) {
       df3 <- head(df2, 1) %>%
         pull(Element)
       
-      print(paste0(df3, " has the lowest ",  input$quants,  " of the elelments displayed above.", sep = ""))
+      return(paste0(df3, " has the lowest ",  input$quants,  " of the elelments displayed above.", sep = ""))
     })
     
     
@@ -280,7 +357,7 @@ server <- function(input, output) {
       df3 <- head(df2, 1) %>%
         pull(Variable)
       
-      print(paste0(df3, " has the highest group average ", input$quants, " of the elements displayed above.", sep = ""))
+      return(paste0(df3, " has the highest group average ", input$quants, " of the elements displayed above.", sep = ""))
     })
     
     output$printme4 <- renderText({
@@ -298,11 +375,30 @@ server <- function(input, output) {
       df3 <- head(df2, 1) %>%
         pull(Variable)
       
-      print(paste0(df3, " has the lowest group average ", input$quants, " of the elements displayed above.", sep = ""))
+      return(paste0(df3, " has the lowest group average ", input$quants, " of the elements displayed above.", sep = ""))
     })
     
 
 ##### save table #####
+    
+    
+    # Generate a sample table
+    output$table <- renderTable({
+      
+      df2 <- df %>%
+        filter(Type %in% input$types,
+               Phase %in% input$phases) %>%
+        mutate(AtomicNumber = as.factor(AtomicNumber),
+               Group = as.factor(Group),
+               Period = as.factor(Period)) %>%
+        select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
+        arrange(desc(.[[7]])) %>%
+        head(. ,5)
+      
+      return(df2)
+    })
+    
+    
     
     # Generate a sample table
     output$myTable <- renderTable({
@@ -374,10 +470,10 @@ server <- function(input, output) {
     
     output$html <- renderText({
       
-      printme <- 'Source data from <a href="https://github.com/Bowserinator/Periodic-Table-JSON/blob/master/PeriodicTableCSV.csv">Bowserinator GitHub</a>, <a href="https://github.com/Bluegrams/periodic-table-data/blob/master/Periodica.Data/Data/ElementData.csv">Bluegrams GitHub</a>, 
-      <a href="https://pubchem.ncbi.nlm.nih.gov/periodic-table/">PubChem</a>, and <a href="https://gist.github.com/GoodmanSciences/c2dd862cd38f21b0ad36b8f96b4bf1ee#file-periodic-table-of-elements-csv">GoodmanSciences GitHub</a>.'
-        
-       print(printme)
+      printme <- '<br>Source data from <a href="https://github.com/Bowserinator/Periodic-Table-JSON/blob/master/PeriodicTableCSV.csv">Bowserinator GitHub</a>, <a href="https://github.com/Bluegrams/periodic-table-data/blob/master/Periodica.Data/Data/ElementData.csv">Bluegrams GitHub</a>, 
+      <a href="https://pubchem.ncbi.nlm.nih.gov/periodic-table/">PubChem</a>, and <a href="https://gist.github.com/GoodmanSciences/c2dd862cd38f21b0ad36b8f96b4bf1ee#file-periodic-table-of-elements-csv">GoodmanSciences GitHub</a>. <br><br> Source code available at  <a href="https://raynaharris.com/github/periodictable"> Rayna\'s GitHub</a>.'
+      
+        return(printme)
     })
     
     
