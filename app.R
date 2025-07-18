@@ -96,10 +96,6 @@ ui <- fluidPage(
             br(),
             checkboxGroupInput("types", label = "Select: Type", 
                                choices = types, selected = displayfirst),
-            br(),
-            checkboxGroupInput("elements", label = "Select Elements to Display in a Table Preview and as Lables on Plot", 
-                               choices = elements, selected = displayElements),
-            br(),
             downloadButton("downloadTable", "Download the table displayed"),
             br(),
             br(),
@@ -107,6 +103,10 @@ ui <- fluidPage(
             br(),
             br(),
             htmlOutput('html'),
+            br(),
+            br(),
+            checkboxGroupInput("elements", label = "Select Elements to Display in a Table Preview and as Lables on Plot", 
+                               choices = elements, selected = displayElements),
             br()
         ),
 
