@@ -73,6 +73,8 @@ newquants <- c("AtomicRadius", "Electronegativity",
 # "VanDerWaalsRadius", "NumberofIsotopes"
 yesnolevels <- c("Yes", "No")
 
+displayElements <- c("Oxygen", "Radon", "Sodium", "Gold",  "Fluorine", "Lanthanum")
+
 
 ####### Data import #######
 
@@ -127,8 +129,7 @@ ui <- fluidPage(
             htmlOutput('html'),
             br(),
             checkboxGroupInput("elements", label = "Select Elements to Display in a Table Preview", 
-                               choices = elements, selected = c("Oxygen", "Radon", 
-                                                                "Sodium", "Gold",  "Chlorine")),
+                               choices = elements, selected = displayElements),
             br()
         ),
 
@@ -214,7 +215,8 @@ server <- function(input, output) {
         filter(Phase %in% input$phases) %>%
         rename("Variable" = input$quals,
                "Measure" = input$quants)  %>%
-        select(AtomicNumber, Symbol, Variable, Measure) 
+        select(Element, AtomicNumber, Symbol, Variable, Measure) %>%
+        mutate(NewLabel = ifelse(Element %in% input$elements, Symbol, ""))
       
       mytitle = paste0("Barplot of ", input$quants,  sep = "" )  
       mysubtitle = paste0("Which elements have the highest and lowest ", 
@@ -222,9 +224,9 @@ server <- function(input, output) {
       
 
       p <- ggplot(df2, aes(x = AtomicNumber , y = Measure, 
-                           fill = Variable, label = Symbol)) +
+                           fill = Variable, label = NewLabel)) +
         geom_bar(stat = "identity") +
-        geom_text(check_overlap = TRUE, size = 3.5) +
+        geom_text(check_overlap = F, size = 3.5) +
         theme_classic() +
         labs(fill = input$quals,
              x = "Atomic Number",
@@ -269,7 +271,7 @@ server <- function(input, output) {
       return(p)
     })
     
-##### scatter plots
+##### scatter plots ####
     
     output$scatterplot <- renderPlot({
       
@@ -290,16 +292,17 @@ server <- function(input, output) {
         select(AtomicNumber:Element, Variable, all_of(newquants),  input$quants) %>%
         pivot_longer(cols = c(newquants), 
                      names_to = "Measures", values_to = "Value") %>%
-        left_join(., temp)
+        left_join(., temp) %>%
+        mutate(NewLabel = ifelse(Element %in% input$elements, Symbol, ""))
       head(dflong)  
       
-      p <- ggplot(dflong, aes(x = Value, y = Measure, label = Symbol)) +
+      p <- ggplot(dflong, aes(x = Value, y = Measure, label = NewLabel)) +
         #geom_smooth(method = "lm", color = "darkgrey", se = F) +
         geom_point(aes(color = Variable)) +
         facet_wrap(~Measures, scales = "free_x", switch = "x") +
         theme_classic( ) + 
         labs(y = input$quants, subtitle = mysubtitle, title = mytitle) +
-        geom_text(check_overlap = TRUE, size = 3.5) 
+        geom_text(check_overlap = F, size = 3.5) 
       return(p)  
       
       
@@ -341,12 +344,16 @@ server <- function(input, output) {
         filter(Type %in% input$types,
                Phase %in% input$phases) %>%
         select(AtomicNumber, Symbol, Element, input$quals, input$quants) %>% 
+        arrange(desc(AtomicNumber)) %>%
         arrange(.[[5]])  
       
       df3 <- head(df2, 1) %>%
         pull(Element)
       
-      return(paste0(df3, " has the lowest ",  input$quants,  " of the elelments displayed above.", sep = ""))
+      df4 <- head(df2, 1) %>%
+        pull(input$quants)
+      
+      return(paste0(df3, " has the lowest ",  input$quants,  " of the elelments displayed above ",  df4, sep = ""))
     })
     
     

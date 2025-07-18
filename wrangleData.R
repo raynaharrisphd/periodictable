@@ -36,15 +36,15 @@ temp1 <- df1 %>%
 
 temp2 <- df2  %>%
   select(AtomicNumber, Symbol, Group, Period, Block,
-         AtomicMass, Density, HeatCapacity:Discovery, 
+         Density, HeatCapacity:Discovery, 
          DiscoveredBy, Configuration)
-colnames(temp2)[23] <- "NobleGasConfig"
+colnames(temp2)[22] <- "NobleGasConfig"
 head(temp2)
 
 temp3 <- df3 %>% 
-  select(AtomicNumber, Symbol, StandardState, GroupBlock)
-colnames(temp3)[4] <- "Type"
-colnames(temp3)[3] <- "Phase"
+  select(AtomicNumber, AtomicMass, Symbol, StandardState, GroupBlock)
+colnames(temp3)[5] <- "Type"
+colnames(temp3)[4] <- "Phase"
 
 temp4 <- df4 %>%
   select(AtomicNumber, Symbol, NumberofNeutrons, NumberofProtons, 
