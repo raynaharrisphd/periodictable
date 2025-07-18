@@ -293,7 +293,7 @@ server <- function(input, output) {
       head(dflong)  
       
       p <- ggplot(dflong, aes(x = Value, y = Measure)) +
-        geom_smooth(method = "lm", color = "darkgrey", se = F) +
+        #geom_smooth(method = "lm", color = "darkgrey", se = F) +
         geom_point(aes(color = Variable)) +
         facet_wrap(~Measures, scales = "free_x", switch = "x") +
         theme_classic( ) + 
