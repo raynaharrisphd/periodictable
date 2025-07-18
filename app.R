@@ -39,7 +39,8 @@ myfunction <- function(x,y) {
   print(res)
   
   isisgnif <-ifelse(res$p.value == 0, ". Self-comparison ", 
-                    ifelse(res$p.value < 0.05 && res$estimate < -0.69 | res$estimate > 0.69, ". Correlated ", ". Not correlated"))
+                    ifelse(res$p.value < 0.05 && res$estimate < -0.69,  ". Inversely correlated ",
+                           ifelse(res$p.value < 0.05 && res$estimate > 0.69, ". Positively correlated ",". Not correlated")))
     
   
   p <- paste0(x, " ~ ", y, ":   R^2 = ", round(res$estimate,3), ", p-value = ", signif(res$p.value, 3), isisgnif, sep = "" )
@@ -106,7 +107,7 @@ ui <- fluidPage(
         sidebarPanel(
             h4("Customize the Graphs and Tables"),
             radioButtons("quants", label = "Scale: Quantitative Prorties", 
-                         choices = quants, selected = "AtomicRadius"),
+                         choices = quants, selected = "Electronegativity"),
             br(),
             radioButtons("quals", label = "Color: Qualitative Properties", 
                          choices = quals, selected = "Type"),
