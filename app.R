@@ -486,7 +486,7 @@ server <- function(input, output) {
           mutate(AtomicNum = as.factor(AtomicNumber),
                  Group = as.factor(Group),
                  Period = as.factor(Period)) %>%
-          select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants) %>% 
+          select(AtomicNumber, Symbol, Element, Period, Group,  input$quals, input$quants, all_of(newquants)) %>% 
           arrange(desc(.[[7]])) %>%
           drop_na()
         
