@@ -96,6 +96,8 @@ ui <- fluidPage(
             br(),
             checkboxGroupInput("types", label = "Select: Type", 
                                choices = types, selected = displayfirst),
+             br(),
+             br(),
             downloadButton("downloadTable", "Download the table displayed"),
             br(),
             br(),
