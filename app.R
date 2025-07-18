@@ -191,7 +191,7 @@ server <- function(input, output) {
         geom_text(check_overlap = TRUE, nudge_y = 0.5,
                   size = 4) +
         scale_y_reverse(breaks= c(1,2,3,4,5,6,7),
-                        limits = c(10,1)) +
+                        limits = c(9,1)) +
         scale_x_continuous(breaks = c(1,2,3,4,5,6,7,8,9,11,10,12,13,14,15,16,17,18),
                            limits = c(1,18)) +
         theme_classic() +
