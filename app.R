@@ -50,30 +50,7 @@ myfunction <- function(x,y) {
 
 ####### Lists #######
 
-# inputs
-types <- c("Alkali metal", "Alkaline earth metal", "Lanthanide" ,
-             "Actinide" ,  "Transition metal" ,
-              "Post-transition metal",  "Metalloid", "Nonmetal" , 
-             "Halogen"  , "Noble gas" )
-displayfirst <- c("Alkali metal", "Alkaline earth metal", "Lanthanide", 
-                  "Post-transition metal",  "Metalloid", "Nonmetal", 
-                 "Halogen"  , "Noble gas" )
-phases <- c( "Solid", "Liquid" , "Gas")
-blocks <- c("s", "p", "d", "f")
-quals <- c("Block",  "Phase", "Natural","Radioactive" , "Type", "NumberofValence" )
-quants <- c("AtomicMass", "AtomicRadius", "Density",  "ElectronAffinity", 
-            "Electronegativity", "IonizationEnergy", 
-            "NumberofNeutrons", "NumberofProtons", 
-            "ThermalConductivity")
-
-newquants <- c("AtomicRadius", "Electronegativity", 
-               "IonizationEnergy", "NumberofProtons")
-
-# not used
-# "VanDerWaalsRadius", "NumberofIsotopes"
-yesnolevels <- c("Yes", "No")
-
-displayElements <- c("Oxygen", "Radon", "Sodium", "Gold",  "Fluorine", "Lanthanum")
+source("mylists.R")
 
 
 ####### Data import #######
@@ -120,6 +97,9 @@ ui <- fluidPage(
             checkboxGroupInput("types", label = "Select: Type", 
                                choices = types, selected = displayfirst),
             br(),
+            checkboxGroupInput("elements", label = "Select Elements to Display in a Table Preview and as Lables on Plot", 
+                               choices = elements, selected = displayElements),
+            br(),
             downloadButton("downloadTable", "Download the table displayed"),
             br(),
             br(),
@@ -127,9 +107,6 @@ ui <- fluidPage(
             br(),
             br(),
             htmlOutput('html'),
-            br(),
-            checkboxGroupInput("elements", label = "Select Elements to Display in a Table Preview", 
-                               choices = elements, selected = displayElements),
             br()
         ),
 
