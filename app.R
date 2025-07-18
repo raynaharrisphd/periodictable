@@ -127,7 +127,7 @@ ui <- fluidPage(
             htmlOutput('html'),
             br(),
             checkboxGroupInput("elements", label = "Select Elements to Display in a Table Preview", 
-                               choices = elements, selected = c("Hydrogen","Oxygen", "Radon", 
+                               choices = elements, selected = c("Oxygen", "Radon", 
                                                                 "Sodium", "Gold",  "Chlorine")),
             br()
         ),
